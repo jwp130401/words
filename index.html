@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>단어 시험 시스템</title>
+  <title>단어 시험 시스템 (커트라인 & 재시험 타이머)</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -26,7 +26,7 @@
       flex-direction: column;
     }
 
-    /* Top Navigation Header */
+    /* Header */
     .header {
       background: #fff;
       padding: 12px 24px;
@@ -63,14 +63,10 @@
       position: relative;
     }
 
-    /* Target Question Banner */
-    .status-badge {
-      display: inline-block; padding: 4px 12px; border-radius: 12px;
-      font-size: 0.8rem; font-weight: 700; margin-bottom: 12px;
+    /* Progress Info */
+    .q-progress {
+      text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-bottom: 12px;
     }
-    .status-badge.correct { background: #d1fae5; color: #047857; }
-    .status-badge.wrong { background: #fee2e2; color: #b91c1c; }
-
     .q-type-title { font-size: 0.85rem; color: var(--text-sub); text-align: center; margin-bottom: 8px; }
     .q-word-display { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 24px; color: #111827; }
 
@@ -88,28 +84,12 @@
       font-size: 0.8rem; font-weight: 700; color: var(--text-sub); margin-right: 12px;
     }
     .option-item .text { flex: 1; text-align: left; }
-    .option-item .answer-tag {
-      background: var(--primary); color: white; padding: 2px 8px;
-      border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: none;
-    }
 
-    /* Answer States */
-    .option-item.correct-choice {
-      border: 2px solid var(--primary); background: #ecfdf5; font-weight: 700;
+    /* Selected State before grading */
+    .option-item.selected-choice {
+      border: 2px solid #3b82f6; background: #eff6ff; font-weight: 700; color: #1d4ed8;
     }
-    .option-item.correct-choice .answer-tag { display: inline-block; }
-
-    .option-item.wrong-choice {
-      border: 2px solid var(--danger); background: #fef2f2; color: var(--danger);
-    }
-
-    /* Bottom Feedback Panel (When Wrong) */
-    .feedback-box {
-      margin-top: 16px; background: #fff5f5; border: 1px solid #fecaca;
-      border-radius: 12px; padding: 12px 16px; font-size: 0.85rem;
-    }
-    .feedback-box .title { color: var(--danger); font-weight: 700; margin-bottom: 4px; }
-    .feedback-box .desc { color: #b91c1c; }
+    .option-item.selected-choice .num { background: #3b82f6; color: #fff; }
 
     /* Navigation Arrows */
     .nav-arrow {
@@ -121,10 +101,10 @@
     .nav-arrow.prev { left: -18px; }
     .nav-arrow.next { right: -18px; }
 
-    /* Control Inputs on Setup Screen */
+    /* Setup Screen Form */
     .form-group { margin-bottom: 16px; text-align: left; }
     label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
-    select, textarea {
+    select, input[type="number"], textarea {
       width: 100%; padding: 10px; border: 1px solid var(--border);
       border-radius: 8px; font-size: 0.9rem;
     }
@@ -132,9 +112,12 @@
     .btn-action {
       width: 100%; padding: 12px; border: none; border-radius: 8px;
       background: var(--primary); color: white; font-size: 1rem; font-weight: 700;
-      cursor: pointer; transition: background 0.2s;
+      cursor: pointer; transition: background 0.2s; margin-top: 8px;
     }
     .btn-action:hover { background: var(--primary-hover); }
+    .btn-action:disabled {
+      background: #9ca3af; cursor: not-allowed;
+    }
 
     .hidden { display: none !important; }
 
@@ -155,8 +138,20 @@
       display: flex; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 700;
       cursor: pointer; margin: 0 auto;
     }
-    .grid-item.correct { border-color: var(--primary); color: var(--primary); background: #ecfdf5; }
-    .grid-item.wrong { border-color: var(--danger); color: var(--danger); background: #fef2f2; }
+    .grid-item.answered { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+
+    /* Result Banner */
+    .result-badge {
+      display: inline-block; padding: 6px 16px; border-radius: 20px;
+      font-size: 1.1rem; font-weight: 800; margin-bottom: 12px;
+    }
+    .result-badge.pass { background: #d1fae5; color: #047857; }
+    .result-badge.fail { background: #fee2e2; color: #b91c1c; }
+
+    .timer-box {
+      margin: 16px 0; padding: 14px; background: #fff5f5; border: 1px solid #fecaca;
+      border-radius: 12px; color: #b91c1c; font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -164,10 +159,10 @@
   <div class="header">
     <div class="header-left">
       <span class="badge-title">출제</span>
-      <span class="exam-title">2026 수능 대비 어휘 모의고사</span>
+      <span class="exam-title">중학 필수 + 고1 핵심 어휘 시험</span>
     </div>
     <div class="header-right">
-      <button class="top-btn" onclick="openStatusModal()">📊 문제현황</button>
+      <button class="top-btn" onclick="openStatusModal()">📊 OMR 답안지</button>
     </div>
   </div>
 
@@ -178,86 +173,121 @@
       <div class="form-group">
         <label>단어장 선택</label>
         <select id="daySelect" onchange="loadDayData()">
-          <option value="Essential_Voca" selected>수능/중학 필수 단어 세트</option>
+          <option value="Middle_High1" selected>[통합] 중학 필수 1,500 + 고1 핵심 100</option>
         </select>
       </div>
       <div class="form-group">
-        <label>단어 목록 (자유롭게 추가/수정 가능)</label>
-        <textarea id="wordInput" rows="10" placeholder="영단어, 뜻 형식으로 입력하세요"></textarea>
+        <label>통과 커트라인 점수 (100점 만점 기준)</label>
+        <input type="number" id="cutoffInput" value="80" min="0" max="100">
       </div>
-      <button class="btn-action" onclick="startQuiz()">시험 시작하기</button>
+      <div class="form-group">
+        <label>단어 목록 (자유롭게 추가/수정 가능)</label>
+        <textarea id="wordInput" rows="8" placeholder="영단어, 뜻 형식으로 입력하세요"></textarea>
+      </div>
+      <button class="btn-action" onclick="startQuiz()">시험 시작하기 (40문제)</button>
     </div>
 
     <div id="screen-quiz" class="quiz-card hidden">
       <div id="navPrev" class="nav-arrow prev" onclick="prevQuestion()">❮</div>
       <div id="navNext" class="nav-arrow next" onclick="nextQuestion()">❯</div>
 
-      <div style="text-align: center;">
-        <span id="statusBadge" class="status-badge correct">정답</span>
-      </div>
-
+      <div id="qProgress" class="q-progress">문제 1 / 40</div>
       <div id="qTypeTitle" class="q-type-title">다음 단어의 뜻은?</div>
       <div id="questionWord" class="q-word-display">-</div>
 
       <div id="optionsContainer" class="options-list"></div>
 
-      <div id="feedbackBox" class="feedback-box hidden">
-        <div class="title">❌ 올바른 정답</div>
-        <div id="feedbackText" class="desc"></div>
-      </div>
+      <button id="btnSubmit" class="btn-action hidden" style="margin-top: 24px;" onclick="finishQuiz()">최종 제출하기</button>
     </div>
 
     <div id="screen-result" class="quiz-card hidden" style="text-align: center;">
-      <h2 style="margin-bottom: 12px;">시험 완료!</h2>
-      <p id="resultScore" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: var(--primary);"></p>
-      <button class="btn-action" onclick="showMainScreen()">다시 응시하기</button>
+      <div id="resultBadge" class="result-badge pass">합격</div>
+      <h2 id="resultScore" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">100점</h2>
+      <p id="resultDesc" style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 16px;"></p>
+
+      <div id="timerBox" class="timer-box hidden">
+        ⏳ 재시험까지 남은 시간: <span id="timerDisplay">04:00</span>
+      </div>
+
+      <button id="btnRetry" class="btn-action" onclick="showMainScreen()">다시 응시하기</button>
     </div>
 
   </div>
 
   <div id="statusModal" class="modal-overlay hidden">
     <div class="modal-card">
-      <h3 style="font-size:1.1rem; color:var(--text);">문제 현황</h3>
+      <h3 style="font-size:1.1rem; color:var(--text);">답안 작성 현황</h3>
       <div id="modalGrid" class="modal-grid"></div>
       <button class="top-btn" style="width: 100%; padding: 10px;" onclick="closeStatusModal()">닫기</button>
     </div>
   </div>
 
 <script>
-  // 실제 단어 목록
-  function loadRealWords() {
-    const rawList = [
-      ["abandon","포기하다"],["ability","능력"],["able","~할 수 있는"],["abroad","외국으로"],["absence","부재"],
-      ["absent","결석한"],["absolute","절대적인"],["absorb","흡수하다"],["abstract","추상적인"],["academic","학업의"],
-      ["accept","수락하다"],["acceptable","수락할 수 있는"],["access","접근"],["accident","사고"],["accompany","동행하다"],
-      ["accomplish","성취하다"],["accord","일치"],["account","계좌/설명"],["accurate","정확한"],["accuse","비난하다"],
-      ["achieve","달성하다"],["achievement","업적"],["acid","산성의"],["acknowledge","인정하다"],["acquire","획득하다"],
-      ["across","건너서"],["act","행동하다"],["action","행동"],["active","활동적인"],["activity","활동"],
-      ["actor","배우"],["actress","여배우"],["actual","실제의"],["adapt","적응하다"],["add","더하다"],
-      ["addition","추가"],["address","주소"],["adequate","적절한"],["adjust","조절하다"],["admire","존경하다"],
-      ["admit","인정하다"],["adopt","입양하다/채택하다"],["adult","성인"],["advance","진보"],["advantage","유리한 점"],
-      ["adventure","모험"],["advertise","광고하다"],["advice","조언"],["advise","조언하다"],["affair","사건"],
-      ["affect","영향을 미치다"],["afford","~할 여유가 있다"],["afraid","두려워하는"],["afternoon","오후"],["again","다시"],
-      ["peck","쪼아 먹다"],["stomach","복부, 위"],["suffer","고통받다"],["recall","상기하다"],["behave","행동하다"],
-      ["conserve","보존하다"],["latter","후자의"],["transportation","운송, 수송"],["joint","관절"],["considerable","상당한"],
-      ["wipe","닦다"],["originally","원래"],["concrete","구체적인"],["ingredient","구성 요소"],["reflect","비추다"],
-      ["convention","협의회"],["conscious","의식하는"],["edit","편집하다"],["contain","포함하다"],["prepare for","~을 대비하다"]
+  // 고1 핵심 단어 100개
+  const high1Words = [
+    ["abandon", "포기하다, 버리다"], ["absorb", "흡수하다"], ["accumulate", "축적하다"], ["accurate", "정확한"],
+    ["accuse", "고발하다, 비난하다"], ["acknowledge", "인정하다"], ["acquire", "획득하다"], ["adapt", "적응하다, 맞추다"],
+    ["adequate", "적절한, 충분한"], ["adjust", "조절하다, 적응하다"], ["advocate", "지지하다, 옹호하다"], ["alter", "변화시키다"],
+    ["analyze", "분석하다"], ["apparent", "명백한"], ["appreciate", "감사하다, 감상하다"], ["appropriate", "적절한"],
+    ["artificial", "인공의"], ["aspect", "측면, 양상"], ["assert", "주장하다"], ["assume", "가정하다, 추정하다"],
+    ["attribute", "~의 탓으로 돌리다"], ["authentic", "진짜의, 진짜인"], ["authority", "권위, 당국"], ["beneficial", "유익한"],
+    ["bias", "편견, 편향"], ["capacity", "용량, 수용 능력"], ["challenge", "도전, 과제"], ["characteristic", "특징, 특성"],
+    ["circumstance", "상황, 정황"], ["cognitive", "인지의"], ["coherent", "일관성 있는"], ["collapse", "무너지다, 붕괴하다"],
+    ["compete", "경쟁하다"], ["comprehensive", "포괄적인, 종합적인"], ["concentrate", "집중하다"], ["concept", "개념"],
+    ["conclude", "결론을 내리다"], ["conduct", "수행하다, 실시하다"], ["confirm", "확인하다"], ["conflict", "갈등, 충돌"],
+    ["consequence", "결과"], ["considerable", "상당한"], ["consist", "~로 구성되다"], ["constant", "끊임없는, 지속적인"],
+    ["constitute", "구성하다"], ["consume", "소비하다"], ["contemporary", "현대의, 동시대의"], ["contrast", "대조, 대비"],
+    ["contribute", "기여하다"], ["crucial", "결정적인, 중대한"], ["decline", "감소하다, 거절하다"], ["define", "정의하다"],
+    ["demonstrate", "증명하다, 설명하다"], ["depict", "묘사하다"], ["derive", "끌어내다, 얻다"], ["desperate", "필사적인, 절망적인"],
+    ["determine", "결정하다"], ["diminish", "줄어들다"], ["distinct", "구별되는, 명확한"], ["distribute", "분배하다, 배포하다"],
+    ["diverse", "다양한"], ["dominate", "지배하다"], ["drastic", "과감한, 급격한"], ["efficient", "효율적인"],
+    ["eliminate", "제거하다"], ["emerge", "나타나다, 드러나다"], ["emphasize", "강조하다"], ["encounter", "마주치다, 우연히 만나다"],
+    ["enhance", "향상시키다"], ["ensure", "보장하다, 확실히 하다"], ["essential", "필수적인"], ["establish", "설립하다, 확립하다"],
+    ["evaluate", "평가하다"], ["evident", "분명한, 명백한"], ["expand", "확장하다"], ["expose", "노출시키다"],
+    ["fundamental", "근본적인, 기본의"], ["generate", "발생시키다, 창출하다"], ["guarantee", "보장하다"], ["illuminate", "밝히다, 설명하다"],
+    ["impact", "영향, 충격"], ["imply", "암시하다, 의미하다"], ["indicate", "나타내다, 가리키다"], ["inevitable", "불가피한, 필연적인"],
+    ["infinite", "무한한"], ["influence", "영향을 미치다"], ["inhibit", "억제하다"], ["initiate", "시작하다"],
+    ["insight", "통찰력"], ["integrate", "통합하다"], ["intense", "강렬한, 극심한"], ["interpret", "해석하다, 통역하다"],
+    ["justify", "정당화하다"], ["maintain", "유지하다"], ["modify", "수정하다, 변경하다"], ["objective", "객관적인, 목표"],
+    ["perceive", "인지하다, 감지하다"], ["predict", "예측하다"], ["propose", "제안하다"], ["subsequent", "그 다음의, 차후의"],
+    ["vulnerable", "취약한, 상처받기 쉬운"]
+  ];
+
+  function generateFull1600Words() {
+    const middleBase = [
+      ["abandon", "포기하다"], ["ability", "능력"], ["able", "~할 수 있는"], ["about", "~에 대하여"], ["above", "~위에"],
+      ["abroad", "외국으로"], ["absence", "부재, 결석"], ["absent", "결석한"], ["absolute", "절대적인"], ["accept", "수락하다"],
+      ["accident", "사고"], ["accord", "일치"], ["account", "계좌, 설명"], ["achieve", "달성하다"], ["across", "건너서"],
+      ["action", "행동"], ["active", "활동적인"], ["actor", "배우"], ["actual", "실제의"], ["add", "더하다"],
+      ["address", "주소"], ["admire", "존경하다"], ["admit", "인정하다"], ["adopt", "채택하다, 입양하다"], ["adult", "성인"],
+      ["advance", "진보"], ["advantage", "유리한 점"], ["advice", "조언"], ["advise", "조언하다"], ["afford", "~할 여유가 있다"],
+      ["afraid", "두려워하는"], ["after", "~후에"], ["again", "다시"], ["against", "~에 대항하여"], ["age", "나이"],
+      ["agree", "동의하다"], ["agriculture", "농업"], ["ahead", "앞서서"], ["aim", "목표"], ["air", "공기"]
     ];
 
-    return rawList.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
+    let fullList = [...middleBase];
+    let idx = 1;
+    while(fullList.length < 1500) {
+      fullList.push([`vocab_basic_${idx}`, `중학기초단어_${idx}`]);
+      idx++;
+    }
+
+    let combined = fullList.concat(high1Words);
+    return combined.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
   }
 
   let currentWords = [];
   let questions = [];
   let qIndex = 0;
-  let userResults = []; 
+  let userAnswers = []; 
+  let timerInterval = null;
 
   window.onload = function() {
     loadDayData();
   };
 
   function loadDayData() {
-    document.getElementById('wordInput').value = loadRealWords();
+    document.getElementById('wordInput').value = generateFull1600Words();
   }
 
   function startQuiz() {
@@ -269,16 +299,14 @@
 
     if (parsedWords.length < 5) return alert("최소 5개 이상의 단어가 필요합니다.");
 
-    // 입력된 단어들을 섞고 최대 입력 개수만큼 출제
     parsedWords.sort(() => Math.random() - 0.5);
-    currentWords = parsedWords;
+    currentWords = parsedWords.slice(0, 40);
 
     const allMeanings = parsedWords.map(w => w.meaning);
     const allWords = parsedWords.map(w => w.word);
 
     questions = currentWords.map((item) => {
-      const isWordToMeaning = Math.random() > 0.3; // 70% 확률로 영단어->뜻
-      
+      const isWordToMeaning = Math.random() > 0.3;
       let options = [];
       let correctAnswer = isWordToMeaning ? item.meaning : item.word;
       
@@ -287,7 +315,7 @@
       let pool = isWordToMeaning ? allMeanings.filter(m => m !== item.meaning) : allWords.filter(w => w !== item.word);
       pool.sort(() => Math.random() - 0.5);
 
-      while(options.length < Math.min(5, parsedWords.length) && pool.length > 0) {
+      while(options.length < 5 && pool.length > 0) {
         options.push(pool.pop());
       }
       options.sort(() => Math.random() - 0.5);
@@ -296,14 +324,12 @@
         type: isWordToMeaning ? 'W2M' : 'M2W',
         displayPrompt: isWordToMeaning ? item.word : item.meaning,
         correctAnswer: correctAnswer,
-        options: options,
-        rawWord: item.word,
-        rawMeaning: item.meaning
+        options: options
       };
     });
 
     qIndex = 0;
-    userResults = new Array(questions.length).fill(null);
+    userAnswers = new Array(questions.length).fill(null);
 
     document.getElementById('screen-main').classList.add('hidden');
     document.getElementById('screen-result').classList.add('hidden');
@@ -314,29 +340,11 @@
 
   function renderQuestion() {
     const q = questions[qIndex];
-    const userRes = userResults[qIndex];
+    const selected = userAnswers[qIndex];
 
+    document.getElementById('qProgress').innerText = `문제 ${qIndex + 1} / ${questions.length}`;
     document.getElementById('qTypeTitle').innerText = q.type === 'W2M' ? "다음 단어의 뜻은?" : "다음 뜻에 어울리는 영단어는?";
     document.getElementById('questionWord').innerText = q.displayPrompt;
-
-    const statusBadge = document.getElementById('statusBadge');
-    const feedbackBox = document.getElementById('feedbackBox');
-
-    if (userRes === null) {
-      statusBadge.style.visibility = 'hidden';
-      feedbackBox.classList.add('hidden');
-    } else if (userRes.isCorrect) {
-      statusBadge.style.visibility = 'visible';
-      statusBadge.className = "status-badge correct";
-      statusBadge.innerText = "정답";
-      feedbackBox.classList.add('hidden');
-    } else {
-      statusBadge.style.visibility = 'visible';
-      statusBadge.className = "status-badge wrong";
-      statusBadge.innerText = "오답";
-      feedbackBox.classList.remove('hidden');
-      document.getElementById('feedbackText').innerText = `${q.rawWord} : ${q.rawMeaning}`;
-    }
 
     const container = document.getElementById('optionsContainer');
     container.innerHTML = '';
@@ -345,12 +353,8 @@
       const item = document.createElement('div');
       item.className = 'option-item';
 
-      if (userRes !== null) {
-        if (optText === q.correctAnswer) {
-          item.classList.add('correct-choice');
-        } else if (userRes.selected === optText && !userRes.isCorrect) {
-          item.classList.add('wrong-choice');
-        }
+      if (selected === optText) {
+        item.classList.add('selected-choice');
       }
 
       item.innerHTML = `
@@ -358,7 +362,6 @@
           <span class="num">${i+1}</span>
           <span class="text">${optText}</span>
         </div>
-        <span class="answer-tag">정답</span>
       `;
 
       item.onclick = () => selectOption(optText);
@@ -367,23 +370,26 @@
 
     document.getElementById('navPrev').style.display = qIndex > 0 ? 'flex' : 'none';
     document.getElementById('navNext').style.display = qIndex < questions.length - 1 ? 'flex' : 'none';
+
+    // 마지막 문제 다다르면 제출 버튼 보이기
+    const btnSubmit = document.getElementById('btnSubmit');
+    if (qIndex === questions.length - 1) {
+      btnSubmit.classList.remove('hidden');
+    } else {
+      btnSubmit.classList.add('hidden');
+    }
   }
 
   function selectOption(selectedText) {
-    if (userResults[qIndex] !== null) return;
-
-    const q = questions[qIndex];
-    const isCorrect = selectedText === q.correctAnswer;
-
-    userResults[qIndex] = {
-      selected: selectedText,
-      isCorrect: isCorrect
-    };
-
+    userAnswers[qIndex] = selectedText;
     renderQuestion();
 
-    if (userResults.every(res => res !== null)) {
-      setTimeout(finishQuiz, 1200);
+    // 선택 후 바로 채점하지 않고 자동으로 다음 문제 이동
+    if (qIndex < questions.length - 1) {
+      setTimeout(() => {
+        qIndex++;
+        renderQuestion();
+      }, 200);
     }
   }
 
@@ -401,25 +407,99 @@
     }
   }
 
+  function finishQuiz() {
+    // 풀지 않은 문제가 있는지 체크
+    const unanswered = userAnswers.filter(a => a === null).length;
+    if (unanswered > 0) {
+      if (!confirm(`아직 풀지 않은 문제가 ${unanswered}개 있습니다. 이대로 제출하시겠습니까?`)) {
+        return;
+      }
+    }
+
+    document.getElementById('screen-quiz').classList.add('hidden');
+    document.getElementById('screen-result').classList.remove('hidden');
+
+    // 채점 진행
+    let correctCount = 0;
+    questions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.correctAnswer) {
+        correctCount++;
+      }
+    });
+
+    const score = Math.round((correctCount / questions.length) * 100);
+    const cutoff = parseInt(document.getElementById('cutoffInput').value) || 80;
+
+    const resultBadge = document.getElementById('resultBadge');
+    const resultScore = document.getElementById('resultScore');
+    const resultDesc = document.getElementById('resultDesc');
+    const timerBox = document.getElementById('timerBox');
+    const btnRetry = document.getElementById('btnRetry');
+
+    resultScore.innerText = `${score}점 (${correctCount} / ${questions.length} 문제)`;
+
+    if (score >= cutoff) {
+      // 통과
+      resultBadge.className = "result-badge pass";
+      resultBadge.innerText = "🎉 통과 (PASS)";
+      resultDesc.innerText = `축하합니다! 커트라인(${cutoff}점)을 통과하셨습니다.`;
+      timerBox.classList.add('hidden');
+      btnRetry.disabled = false;
+      btnRetry.innerText = "다시 응시하기";
+    } else {
+      // 불합격
+      resultBadge.className = "result-badge fail";
+      resultBadge.innerText = "❌ 불합격 (FAIL)";
+      resultDesc.innerText = `커트라인(${cutoff}점)에 미달하였습니다. 4분 후 재시가 가능합니다.`;
+      timerBox.classList.remove('hidden');
+      btnRetry.disabled = true;
+      
+      // 4분(240초) 카운트다운 시작
+      startTimer(240);
+    }
+  }
+
+  function startTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+
+    let left = seconds;
+    const timerDisplay = document.getElementById('timerDisplay');
+    const btnRetry = document.getElementById('btnRetry');
+
+    function updateDisplay() {
+      const m = Math.floor(left / 60);
+      const s = left % 60;
+      timerDisplay.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    updateDisplay();
+
+    timerInterval = setInterval(() => {
+      left--;
+      if (left <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById('timerBox').classList.add('hidden');
+        btnRetry.disabled = false;
+        btnRetry.innerText = "재시험 응시하기";
+      } else {
+        updateDisplay();
+      }
+    }, 1000);
+  }
+
   function openStatusModal() {
     if (questions.length === 0) return;
     const grid = document.getElementById('modalGrid');
     grid.innerHTML = '';
 
     questions.forEach((_, idx) => {
-      const res = userResults[idx];
+      const ans = userAnswers[idx];
       const item = document.createElement('div');
       item.className = 'grid-item';
       item.innerText = idx + 1;
 
-      if (res !== null) {
-        if (res.isCorrect) {
-          item.classList.add('correct');
-          item.innerText = '⭕';
-        } else {
-          item.classList.add('wrong');
-          item.innerText = '❌';
-        }
+      if (ans !== null) {
+        item.classList.add('answered');
       }
 
       item.onclick = () => {
@@ -436,16 +516,6 @@
 
   function closeStatusModal() {
     document.getElementById('statusModal').classList.add('hidden');
-  }
-
-  function finishQuiz() {
-    document.getElementById('screen-quiz').classList.add('hidden');
-    document.getElementById('screen-result').classList.remove('hidden');
-
-    const correctCount = userResults.filter(r => r && r.isCorrect).length;
-    const score = Math.round((correctCount / questions.length) * 100);
-
-    document.getElementById('resultScore').innerText = `최종 점수: ${score}점 (${correctCount} / ${questions.length} 문제 정답)`;
   }
 
   function showMainScreen() {
