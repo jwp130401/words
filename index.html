@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>단어 시험 시스템 (1,600단어 완충)</title>
+  <title>단어 시험 시스템</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -26,7 +26,7 @@
       flex-direction: column;
     }
 
-    /* Header */
+    /* 상단 헤더 Bar */
     .header {
       background: #fff;
       padding: 12px 24px;
@@ -49,7 +49,7 @@
     }
     .top-btn:hover { background: #e5e7eb; }
 
-    /* Main Container */
+    /* 메인 컨테이너 */
     .main-wrapper {
       flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px;
     }
@@ -63,14 +63,14 @@
       position: relative;
     }
 
-    /* Progress Info */
+    /* 진행 상단 정보 */
     .q-progress {
       text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-bottom: 12px;
     }
     .q-type-title { font-size: 0.85rem; color: var(--text-sub); text-align: center; margin-bottom: 8px; }
     .q-word-display { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 24px; color: #111827; }
 
-    /* Options List */
+    /* 보기 목록 */
     .options-list { display: flex; flex-direction: column; gap: 10px; }
     .option-item {
       display: flex; justify-content: space-between; align-items: center;
@@ -85,13 +85,13 @@
     }
     .option-item .text { flex: 1; text-align: left; }
 
-    /* Selected State before grading */
+    /* 제출 전 선택 상태 표시 */
     .option-item.selected-choice {
       border: 2px solid #3b82f6; background: #eff6ff; font-weight: 700; color: #1d4ed8;
     }
     .option-item.selected-choice .num { background: #3b82f6; color: #fff; }
 
-    /* Navigation Arrows */
+    /* 좌우 탐색 화살표 */
     .nav-arrow {
       position: absolute; top: 50%; transform: translateY(-50%);
       width: 36px; height: 36px; border-radius: 50%; background: #fff;
@@ -101,7 +101,7 @@
     .nav-arrow.prev { left: -18px; }
     .nav-arrow.next { right: -18px; }
 
-    /* Setup Screen Form */
+    /* 폼 요소 */
     .form-group { margin-bottom: 16px; text-align: left; }
     label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
     select, textarea {
@@ -121,7 +121,7 @@
 
     .hidden { display: none !important; }
 
-    /* Modal Grid View */
+    /* OMR 모달 레이어 */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
@@ -140,7 +140,7 @@
     }
     .grid-item.answered { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
 
-    /* Result Banner */
+    /* 결과 배지 */
     .result-badge {
       display: inline-block; padding: 6px 16px; border-radius: 20px;
       font-size: 1.1rem; font-weight: 800; margin-bottom: 12px;
@@ -156,10 +156,11 @@
 </head>
 <body>
 
+  <!-- 상단 헤더 -->
   <div class="header">
     <div class="header-left">
       <span class="badge-title">출제</span>
-      <span class="exam-title">중·고등 필수 어휘 시험</span>
+      <span class="exam-title">중·고등 필수 어휘 모의고사</span>
     </div>
     <div class="header-right">
       <button class="top-btn" onclick="openStatusModal()">📊 OMR 답안지</button>
@@ -168,12 +169,13 @@
 
   <div class="main-wrapper">
 
+    <!-- 1. 메인 설정 화면 -->
     <div id="screen-main" class="quiz-card">
       <h2 style="margin-bottom: 20px; font-size:1.3rem;">단어 시험 설정</h2>
       <div class="form-group">
         <label>단어장 선택</label>
         <select id="daySelect" onchange="loadDayData()">
-          <option value="FullVocabulary" selected>[통합] 중·고등 필수 어휘 1,600단어</option>
+          <option value="FullVocabulary" selected>[통합] 중·고등 필수 어휘 단어장</option>
         </select>
       </div>
       <div class="form-group">
@@ -186,9 +188,10 @@
         <label>단어 목록 (자유롭게 추가/수정 가능)</label>
         <textarea id="wordInput" rows="8" placeholder="영단어, 뜻 형식으로 입력하세요"></textarea>
       </div>
-      <button class="btn-action" onclick="startQuiz()">시험 시작하기 (40문제)</button>
+      <button class="btn-action" onclick="startQuiz()">시험 시작하기 (40문제 무작위)</button>
     </div>
 
+    <!-- 2. 시험 응시 화면 -->
     <div id="screen-quiz" class="quiz-card hidden">
       <div id="navPrev" class="nav-arrow prev" onclick="prevQuestion()">❮</div>
       <div id="navNext" class="nav-arrow next" onclick="nextQuestion()">❯</div>
@@ -202,11 +205,13 @@
       <button id="btnSubmit" class="btn-action hidden" style="margin-top: 24px;" onclick="finishQuiz()">최종 제출하기</button>
     </div>
 
+    <!-- 3. 최종 결과 화면 -->
     <div id="screen-result" class="quiz-card hidden" style="text-align: center;">
       <div id="resultBadge" class="result-badge pass">합격</div>
       <h2 id="resultScore" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">100점</h2>
       <p id="resultDesc" style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 16px;"></p>
 
+      <!-- 불합격 및 창 이탈 시 4분 대기 타이머 -->
       <div id="timerBox" class="timer-box hidden">
         ⏳ 재시험까지 남은 시간: <span id="timerDisplay">04:00</span>
       </div>
@@ -216,6 +221,7 @@
 
   </div>
 
+  <!-- OMR 답안지 모달 -->
   <div id="statusModal" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="font-size:1.1rem; color:var(--text);">답안 작성 현황</h3>
@@ -227,87 +233,150 @@
 <script>
   const CUTOFF_SCORE = 80;
 
-  // 실질 어휘들로 구성된 단어 데이터베이스
-  const baseVocabulary = [
-    ["abandon", "포기하다, 버리다"], ["absorb", "흡수하다"], ["accumulate", "축적하다"], ["accurate", "정확한"],
-    ["accuse", "고발하다, 비난하다"], ["acknowledge", "인정하다"], ["acquire", "획득하다"], ["adapt", "적응하다, 맞추다"],
-    ["adequate", "적절한, 충분한"], ["adjust", "조절하다, 적응하다"], ["advocate", "지지하다, 옹호하다"], ["alter", "변화시키다"],
-    ["analyze", "분석하다"], ["apparent", "명백한"], ["appreciate", "감사하다, 감상하다"], ["appropriate", "적절한"],
-    ["artificial", "인공의"], ["aspect", "측면, 양상"], ["assert", "주장하다"], ["assume", "가정하다, 추정하다"],
-    ["attribute", "~의 탓으로 돌리다"], ["authentic", "진짜의, 진짜인"], ["authority", "권위, 당국"], ["beneficial", "유익한"],
-    ["bias", "편견, 편향"], ["capacity", "용량, 수용 능력"], ["challenge", "도전, 과제"], ["characteristic", "특징, 특성"],
-    ["circumstance", "상황, 정황"], ["cognitive", "인지의"], ["coherent", "일관성 있는"], ["collapse", "무너지다, 붕괴하다"],
-    ["compete", "경쟁하다"], ["comprehensive", "포괄적인, 종합적인"], ["concentrate", "집중하다"], ["concept", "개념"],
-    ["conclude", "결론을 내리다"], ["conduct", "수행하다, 실시하다"], ["confirm", "확인하다"], ["conflict", "갈등, 충돌"],
-    ["consequence", "결과"], ["considerable", "상당한"], ["consist", "~로 구성되다"], ["constant", "끊임없는, 지속적인"],
-    ["constitute", "구성하다"], ["consume", "소비하다"], ["contemporary", "현대의, 동시대의"], ["contrast", "대조, 대비"],
-    ["contribute", "기여하다"], ["crucial", "결정적인, 중대한"], ["decline", "감소하다, 거절하다"], ["define", "정의하다"],
-    ["demonstrate", "증명하다, 설명하다"], ["depict", "묘사하다"], ["derive", "끌어내다, 얻다"], ["desperate", "필사적인, 절망적인"],
-    ["determine", "결정하다"], ["diminish", "줄어들다"], ["distinct", "구별되는, 명확한"], ["distribute", "분배하다, 배포하다"],
-    ["diverse", "다양한"], ["dominate", "지배하다"], ["drastic", "과감한, 급격한"], ["efficient", "효율적인"],
-    ["eliminate", "제거하다"], ["emerge", "나타나다, 드러나다"], ["emphasize", "강조하다"], ["encounter", "마주치다, 우연히 만나다"],
-    ["enhance", "향상시키다"], ["ensure", "보장하다, 확실히 하다"], ["essential", "필수적인"], ["establish", "설립하다, 확립하다"],
-    ["evaluate", "평가하다"], ["evident", "분명한, 명백한"], ["expand", "확장하다"], ["expose", "노출시키다"],
-    ["fundamental", "근본적인, 기본의"], ["generate", "발생시키다, 창출하다"], ["guarantee", "보장하다"], ["illuminate", "밝히다, 설명하다"],
-    ["impact", "영향, 충격"], ["imply", "암시하다, 의미하다"], ["indicate", "나타내다, 가리키다"], ["inevitable", "불가피한, 필연적인"],
-    ["infinite", "무한한"], ["influence", "영향을 미치다"], ["inhibit", "억제하다"], ["initiate", "시작하다"],
-    ["insight", "통찰력"], ["integrate", "통합하다"], ["intense", "강렬한, 극심한"], ["interpret", "해석하다, 통역하다"],
-    ["justify", "정당화하다"], ["maintain", "유지하다"], ["modify", "수정하다, 변경하다"], ["objective", "객관적인, 목표"],
-    ["perceive", "인지하다, 감지하다"], ["predict", "예측하다"], ["propose", "제안하다"], ["subsequent", "그 다음의, 차후의"],
-    ["vulnerable", "취약한, 상처받기 쉬운"], ["abundant", "풍부한"], ["accelerate", "가속화하다"], ["accomplish", "성취하다"],
-    ["advancement", "발전, 진보"], ["aesthetic", "미학적인"], ["ambiguous", "모호한"], ["anticipate", "예상하다"],
-    ["apprehend", "파악하다, 체포하다"], ["articulate", "분명히 말하다"], ["astonish", "놀라게 하다"], ["bureaucracy", "관료제"],
-    ["coincide", "일치하다"], ["commodity", "상품"], ["compensate", "보상하다"], ["compelling", "설득력 있는"],
-    ["comply", "따르다, 준수하다"], ["compromise", "타협하다"], ["conceal", "숨기다"], ["condemn", "비난하다"],
-    ["contamination", "오염"], ["contradict", "반박하다"], ["convenient", "편리한"], ["convey", "전달하다"],
-    ["curtail", "축소시키다"], ["deficiency", "부족, 결핍"], ["deliberate", "고의의, 신중한"], ["deteriorate", "악화되다"],
-    ["disaster", "재앙"], ["discipline", "규율, 훈련"], ["discriminate", "차별하다"], ["displace", "대체하다"],
-    ["distort", "왜곡하다"], ["diversity", "다양성"], ["drastic", "급격한"], ["durable", "내구성이 있는"],
-    ["elaborate", "정교한"], ["eligible", "자격이 있는"], ["eloquent", "유창한"], ["embrace", "포용하다"],
-    ["empathy", "공감"], ["empirical", "실증적인"], ["endorse", "지지하다"], ["enormous", "거대한"],
-    ["epidemic", "유행병"], ["erroneous", "잘못된"], ["exaggerate", "과장하다"], ["exceed", "초과하다"],
-    ["exclusive", "독점적인"], ["exhaustive", "철저한"], ["explicit", "명확한"], ["exploit", "착취하다, 활용하다"],
-    ["extinguish", "끄다"], ["facilitate", "용이하게 하다"], ["feasible", "실현 가능한"], ["flourish", "번창하다"],
-    ["fluctuate", "변동하다"], ["foster", "조성하다, 육성하다"], ["fragile", "약한, 부서지기 쉬운"], ["friction", "마찰"],
-    ["frustrate", "좌절시키다"], ["generous", "관대한"], ["genuine", "진짜의"], ["gradient", "경사도"],
-    ["hostility", "적대감"], ["hypothesis", "가설"], ["illuminate", "조명하다"], ["immense", "엄청난"],
-    ["impartial", "공정한"], ["implement", "시행하다"], ["implicit", "암묵적인"], ["impulse", "충동"],
-    ["incentive", "동기, 자극"], ["indispensable", "없어서는 안 될"], ["induce", "유도하다"], ["inevitable", "피할 수 없는"],
-    ["inherent", "고유한"], ["innovation", "혁신"], ["inspect", "검사하다"], ["integrate", "통합하다"],
-    ["interfere", "간섭하다"], ["intimidate", "위협하다"], ["intrinsic", "본질적인"], ["jeopardize", "위험에 빠뜨리다"],
-    ["legitimate", "정당한"], ["manifest", "명백히 하다"], ["manipulate", "조작하다"], ["meticulous", "꼼꼼한"],
-    ["monopolize", "독점하다"], ["negligible", "하찮은"], ["notorious", "악명 높은"], ["obsolete", "한물간, 구식의"],
-    ["obstacle", "장애물"], ["optiimistic", "낙관적인"], ["paradox", "역설"], ["pessimistic", "비관적인"],
-    ["plausible", "타당한 것 같은"], ["prevalent", "널리 퍼진"], ["profound", "깊은, 심오한"], ["prominent", "두드러진"],
-    ["prospect", "전망"], ["reckless", "무모한"], ["reconcile", "화해시키다"], ["redundant", "불필요한"],
-    ["reluctant", "꺼리는"], ["remedy", "해결책"], ["relinquish", "포기하다"], ["resilient", "회복력 있는"],
-    ["restrain", "억제하다"], ["retain", "유지하다"], ["rigorous", "철저한"], ["scrutinize", "면밀히 조사하다"],
-    ["simultaneous", "동시의"], ["skeptical", "회의적인"], ["spontaneous", "자발적인"], ["subtle", "미묘한"],
-    ["substantial", "상당한"], ["superficial", "피상적인"], ["suppress", "진압하다"], ["susceptible", "민감한"],
-    ["sustain", "지속하다"], ["tangible", "유형의, 만질 수 있는"], ["temporary", "일시적인"], ["tentative", "임시의"],
-    ["thrive", "번창하다"], ["tranquil", "고요한"], ["transient", "일시적인"], ["unanimous", "만장일치의"],
-    ["undergo", "겪다"], ["undermine", "약화시키다"], ["unify", "통일하다"], ["unprecedented", "전례 없는"],
-    ["valid", "유효한"], ["verify", "입증하다"], ["versatile", "다재다능한"], ["vivid", "생생한"],
-    ["yield", "양보하다, 산출하다"]
+  // 정제된 실제 필수 영단어 데이터베이스
+  const realVocabulary = [
+    ["abandon", "포기하다, 버리다"], ["ability", "능력, 기량"], ["able", "~할 수 있는"], ["abroad", "외국으로"],
+    ["absence", "부재, 결석"], ["absent", "결석한"], ["absolute", "절대적인"], ["absorb", "흡수하다"],
+    ["abstract", "추상적인"], ["academic", "학업의, 학술의"], ["accept", "수락하다"], ["acceptable", "수락할 수 있는"],
+    ["access", "접근"], ["accident", "사고"], ["accompany", "동행하다"], ["accomplish", "성취하다"],
+    ["accord", "일치하다"], ["account", "계좌, 설명"], ["accurate", "정확한"], ["accuse", "고발하다, 비난하다"],
+    ["achieve", "달성하다"], ["achievement", "업적"], ["acknowledge", "인정하다"], ["acquire", "획득하다"],
+    ["across", "건너서"], ["act", "행동하다"], ["action", "행동"], ["active", "활동적인"],
+    ["activity", "활동"], ["actor", "배우"], ["actual", "실제의"], ["adapt", "적응하다, 맞추다"],
+    ["add", "더하다"], ["addition", "추가"], ["address", "주소, 연설하다"], ["adequate", "적절한, 충분한"],
+    ["adjust", "조절하다, 적응하다"], ["admire", "존경하다"], ["admit", "인정하다"], ["adopt", "채택하다, 입양하다"],
+    ["adult", "성인"], ["advance", "진보, 전진"], ["advantage", "유리한 점"], ["adventure", "모험"],
+    ["advertise", "광고하다"], ["advice", "조언"], ["advise", "조언하다"], ["affair", "사건, 일"],
+    ["affect", "영향을 미치다"], ["afford", "~할 여유가 있다"], ["afraid", "두려워하는"], ["afternoon", "오후"],
+    ["against", "~에 대항하여"], ["agency", "대리점, 기관"], ["aggressive", "공격적인"], ["agree", "동의하다"],
+    ["agriculture", "농업"], ["ahead", "앞서서"], ["aim", "조준하다, 목표"], ["aircraft", "항공기"],
+    ["alarm", "경보, 알람"], ["alive", "살아있는"], ["allow", "허락하다"], ["almost", "거의"],
+    ["alone", "혼자서"], ["along", "~을 따라서"], ["already", "이미"], ["alter", "변화시키다"],
+    ["alternative", "대안"], ["although", "비록 ~일지라도"], ["always", "항상"], ["amaze", "놀라게 하다"],
+    ["ambition", "야망"], ["ambulance", "구급차"], ["among", "~사이에"], ["amount", "양, 총액"],
+    ["analyze", "분석하다"], ["ancient", "고대의"], ["anger", "분노"], ["angle", "각도"],
+    ["angry", "화난"], ["animal", "동물"], ["announce", "발표하다"], ["annoy", "짜증나게 하다"],
+    ["annual", "연례의"], ["another", "또 다른"], ["answer", "대답하다"], ["anxious", "걱정하는, 불안한"],
+    ["apartment", "아파트"], ["apologize", "사과하다"], ["apparent", "명백한"], ["appeal", "호소하다"],
+    ["appear", "나타나다"], ["appearance", "외모, 출현"], ["apple", "사과"], ["application", "지원, 적용"],
+    ["apply", "적용하다, 지원하다"], ["appoint", "지정하다"], ["appreciate", "감사하다, 감상하다"], ["approach", "접근하다"],
+    ["appropriate", "적절한"], ["approve", "승인하다"], ["area", "지역, 범위"], ["argue", "주장하다, 논쟁하다"],
+    ["arise", "발생하다"], ["arm", "팔, 무기"], ["army", "군대"], ["arrange", "배치하다, 정돈하다"],
+    ["arrest", "체포하다"], ["arrival", "도착"], ["arrive", "도착하다"], ["article", "기사, 물품"],
+    ["artist", "예술가"], ["ashamed", "부끄러운"], ["aside", "옆에"], ["ask", "묻다, 요청하다"],
+    ["asleep", "잠든"], ["aspect", "측면, 양상"], ["assist", "돕다"], ["assistant", "보조원"],
+    ["associate", "연상하다"], ["assume", "가정하다, 추정하다"], ["assure", "보장하다"], ["astonish", "놀라게 하다"],
+    ["athlete", "운동선수"], ["atmosphere", "대기, 분위기"], ["attach", "붙이다"], ["attack", "공격하다"],
+    ["attain", "달성하다"], ["attempt", "시도하다"], ["attend", "참석하다"], ["attention", "주의, 집중"],
+    ["attitude", "태도"], ["attract", "끌어당기다"], ["attribute", "~의 탓으로 돌리다"], ["audience", "청중"],
+    ["author", "저자"], ["authority", "권위, 당국"], ["automatic", "자동의"], ["available", "이용 가능한"],
+    ["average", "평균의"], ["avoid", "피하다"], ["awake", "깨어있는"], ["award", "상"],
+    ["aware", "알고 있는"], ["awful", "끔찍한"], ["background", "배경"], ["bacteria", "세균"],
+    ["baggage", "수하물"], ["balance", "균형"], ["barrier", "장벽"], ["base", "기초"],
+    ["basic", "기본적인"], ["basis", "기반"], ["battle", "전투"], ["beam", "빛줄기"],
+    ["bear", "곰, 견디다"], ["beard", "턱수염"], ["beat", "이기다, 두드리다"], ["beautiful", "아름다운"],
+    ["beauty", "아름다움"], ["become", "~이 되다"], ["behave", "행동하다"], ["behavior", "행동"],
+    ["behind", "뒤에"], ["belief", "믿음"], ["believe", "믿다"], ["belong", "~에 속하다"],
+    ["below", "아래에"], ["bend", "구부리다"], ["beneath", "아래에"], ["benefit", "이익, 혜택"],
+    ["beside", "옆에"], ["betray", "배신하다"], ["better", "더 좋은"], ["between", "사이에"],
+    ["beyond", "너머에"], ["bicycle", "자전거"], ["bill", "청구서, 지폐"], ["bind", "묶다"],
+    ["biology", "생물학"], ["birth", "탄생"], ["bitter", "쓴, 씁쓸한"], ["blame", "비난하다"],
+    ["blanket", "담요"], ["bleed", "피를 흘리다"], ["blend", "섞다"], ["bless", "축복하다"],
+    ["blind", "눈이 먼"], ["block", "막다, 블록"], ["blood", "피"], ["bloom", "꽃이 피다"],
+    ["boast", "자랑하다"], ["boil", "끓이다"], ["bold", "용감한, 대담한"], ["bomb", "폭탄"],
+    ["bond", "유대, 결속"], ["border", "국경, 테두리"], ["bother", "괴롭히다"], ["bottom", "바닥"],
+    ["bounce", "튀기다"], ["boundary", "경계"], ["branch", "나뭇가지, 지점"], ["brave", "용감한"],
+    ["breathe", "호흡하다"], ["breeze", "산들바람"], ["brick", "벽돌"], ["bridge", "다리"],
+    ["brief", "간결한"], ["bright", "밝은"], ["brilliant", "훌륭한, 눈부신"], ["broadcast", "방송하다"],
+    ["bubble", "거품"], ["budget", "예산"], ["build", "짓다, 건설하다"], ["bullet", "총알"],
+    ["bunch", "다발, 송이"], ["burden", "짐, 부담"], ["burst", "터지다"], ["bury", "묻다, 매장하다"],
+    ["business", "사업, 비즈니스"], ["cabin", "오두막, 선실"], ["cable", "케이블, 전선"], ["calculate", "계산하다"],
+    ["calm", "침착한"], ["campaign", "캠페인, 운동"], ["campus", "캠퍼스"], ["cancel", "취소하다"],
+    ["cancer", "암"], ["candidate", "후보자"], ["capable", "~할 능력이 있는"], ["capacity", "수용력, 용량"],
+    ["capital", "수도, 자본"], ["captain", "캡틴, 선장"], ["capture", "포획하다"], ["career", "경력, 직업"],
+    ["careful", "조심스러운"], ["careless", "부주의한"], ["cargo", "화물"], ["carriage", "마차, 탈것"],
+    ["carrier", "운송 회사"], ["casual", "느긋한, 평복의"], ["category", "범주, 카테고리"], ["cause", "원인, 일으키다"],
+    ["caution", "주의, 경고"], ["cave", "동굴"], ["cease", "멈추다, 중단하다"], ["ceiling", "천장"],
+    ["celebrate", "축하하다"], ["cell", "세포, 감방"], ["cemetery", "묘지"], ["central", "중앙의"],
+    ["century", "100년, 세기"], ["ceremony", "의식, 행사"], ["certain", "확신하는, 어떤"], ["certainly", "틀림없이"],
+    ["challenge", "도전"], ["chamber", "방, 회의실"], ["champion", "챔피언"], ["chance", "기회, 확률"],
+    ["change", "바꾸다, 변화"], ["channel", "채널, 수로"], ["chaos", "혼란"], ["chapter", "장, 단원"],
+    ["character", "성격, 캐릭터"], ["characteristic", "특징, 특성"], ["charge", "요금, 충전하다"], ["charity", "자선 단체"],
+    ["charming", "매력적인"], ["chart", "차트, 도표"], ["chase", "쫓다"], ["cheap", "싼, 저렴한"],
+    ["cheat", "속이다"], ["cheerful", "쾌활한"], ["chemical", "화학의, 화학 물질"], ["chemistry", "화학"],
+    ["cherish", "소중히 여기다"], ["chest", "가슴, 상자"], ["chew", "씹다"], ["chief", "주요한, 우두머리"],
+    ["childhood", "어린 시절"], ["chill", "냉기"], ["chimney", "굴뚝"], ["choice", "선택"],
+    ["choir", "합창단"], ["choke", "질식시키다"], ["choose", "선택하다"], ["chronic", "만성의"],
+    ["circle", "원, 동그라미"], ["circuit", "회로, 순환"], ["circulate", "순환하다"], ["circumstance", "상황, 정황"],
+    ["citizen", "시민"], ["civil", "시민의, 문명의"], ["civilization", "문명"], ["claim", "주장하다, 청구하다"],
+    ["clap", "박수치다"], ["clarify", "명확하게 하다"], ["clash", "충돌하다"], ["classic", "고전의"],
+    ["classify", "분류하다"], ["clean", "깨끗한"], ["clear", "명확한, 맑은"], ["clever", "영리한"],
+    ["client", "고객"], ["cliff", "절벽"], ["climate", "기후"], ["climb", "기어오르다"],
+    ["cling", "매달리다"], ["clinic", "병원, 클리닉"], ["close", "닫다, 가까운"], ["cloud", "구름"],
+    ["clue", "단서, 힌트"], ["clumsy", "서투른"], ["cluster", "무더기, 송이"], ["coach", "코치, 감독"],
+    ["coal", "석탄"], ["coalition", "연합"], ["coarse", "거친"], ["coast", "해안"],
+    ["code", "암호, 코드"], ["coincidence", "우연의 일치"], ["collaborate", "협력하다"], ["collapse", "무너지다, 붕괴하다"],
+    ["colleague", "동료"], ["collect", "수집하다"], ["collection", "수집품"], ["collective", "집단적인"],
+    ["college", "대학"], ["collision", "충돌"], ["colony", "식민지"], ["column", "기둥, 칼럼"],
+    ["combat", "전투, 싸우다"], ["combination", "조합"], ["combine", "결합하다"], ["comedy", "코미디"],
+    ["comfort", "편안함, 위로하다"], ["comfortable", "편안한"], ["command", "명령하다"], ["commemorate", "기념하다"],
+    ["commence", "시작하다"], ["comment", "논평, 댓글"], ["commerce", "상업"], ["commercial", "상업의, 광고"],
+    ["commission", "위원회, 수수료"], ["commit", "저지르다, 헌신하다"], ["commitment", "헌신, 약속"], ["committee", "위원회"],
+    ["common", "공통의, 흔한"], ["communicate", "의사소통하다"], ["communication", "통신, 소통"], ["community", "공동체, 사회"],
+    ["companion", "동반자"], ["company", "회사, 동료"], ["compare", "비교하다"], ["comparison", "비교"],
+    ["compass", "나침반"], ["compete", "경쟁하다"], ["competent", "유능한"], ["competition", "경쟁, 대회"],
+    ["competitive", "경쟁력 있는"], ["complain", "불평하다"], ["complaint", "불만, 불평"], ["complete", "완료하다, 완전한"],
+    ["complex", "복잡한"], ["complicate", "복잡하게 하다"], ["compliment", "칭찬"], ["comply", "따르다, 준수하다"],
+    ["component", "구성 요소"], ["compose", "작곡하다, 구성하다"], ["composition", "작품, 작문"], ["compound", "혼합물"],
+    ["comprehend", "이해하다"], ["comprehensive", "포괄적인, 종합적인"], ["compromise", "타협하다"], ["conceal", "숨기다"],
+    ["concede", "인정하다, 양보하다"], ["concentrate", "집중하다"], ["concept", "개념"], ["concern", "우려, 관심"],
+    ["conclude", "결론을 내리다"], ["conclusion", "결론"], ["concrete", "구체적인, 콘크리트"], ["condemn", "비난하다"],
+    ["condition", "조건, 상태"], ["conduct", "수행하다, 실시하다"], ["conference", "회의"], ["confess", "고백하다"],
+    ["confidence", "자신감, 신뢰"], ["confident", "자신감 있는"], ["confine", "가두다, 제한하다"], ["confirm", "확인하다"],
+    ["conflict", "갈등, 충돌"], ["conform", "순응하다"], ["confront", "직면하다"], ["confuse", "혼란스럽게 하다"],
+    ["confusion", "혼란"], ["congratulate", "축하하다"], ["congress", "의회, 회의"], ["connect", "연결하다"],
+    ["connection", "연결, 관계"], ["conquer", "정복하다"], ["conscience", "양심"], ["conscious", "의식하는"],
+    ["consent", "동의하다"], ["consequence", "결과"], ["consequently", "따라서, 결과적으로"], ["conservation", "보존"],
+    ["conservative", "보수적인"], ["conserve", "보존하다"], ["consider", "고려하다"], ["considerable", "상당한"],
+    ["considerate", "사려 깊은"], ["consideration", "고려"], ["consist", "~로 구성되다"], ["consistent", "일관된"],
+    ["consolation", "위로"], ["constant", "끊임없는, 지속적인"], ["constitute", "구성하다"], ["constitution", "헌법, 구성"],
+    ["construct", "건설하다"], ["construction", "건설"], ["consult", "상담하다"], ["consultant", "자문, 컨설턴트"],
+    ["consume", "소비하다"], ["consumer", "소비자"], ["consumption", "소비"], ["contact", "접촉, 연락하다"],
+    ["contain", "포함하다"], ["container", "용기, 컨테이너"], ["contemporary", "현대의, 동시대의"], ["contempt", "경멸"],
+    ["contend", "주장하다, 경쟁하다"], ["content", "내용물, 만족하는"], ["contest", "대회"], ["context", "맥락, 문맥"],
+    ["continent", "대륙"], ["continue", "계속하다"], ["continuous", "계속되는"], ["contract", "계약하다, 수축하다"],
+    ["contradict", "반박하다, 모순되다"], ["contrary", "반대의"], ["contrast", "대조, 대비"], ["contribute", "기여하다"],
+    ["contribution", "기여"], ["control", "통제, 제어하다"], ["controversy", "논란"], ["convenient", "편리한"],
+    ["convention", "관습, 총회"], ["conventional", "관습적인"], ["conversation", "대화"], ["convert", "전환하다"],
+    ["convey", "전달하다"], ["convince", "설득하다, 확신시키다"], ["cook", "요리하다"], ["cool", "시원한, 멋진"],
+    ["cooperate", "협력하다"], ["cooperation", "협력"], ["coordinate", "조정하다"], ["cope", "대처하다"],
+    ["copper", "구리"], ["copy", "복사하다"], ["core", "핵심"], ["corner", "모퉁이"],
+    ["corporate", "기업의"], ["corporation", "법인, 회사"], ["correct", "올바른, 정정하다"], ["correspond", "일치하다, 서신을 주고받다"],
+    ["corridor", "복도"], ["cost", "비용, 비용이 들다"], ["costume", "의상"], ["cottage", "오두막"],
+    ["cotton", "면화, 솜"], ["couch", "소파"], ["cough", "기침하다"], ["council", "의회, 위원회"],
+    ["counsel", "조언하다, 상담"], ["count", "세다, 중요하다"], ["counter", "계산대, 반대의"], ["country", "나라, 시골"],
+    ["countryside", "시골"], ["couple", "커플, 한 쌍"], ["courage", "용기"], ["course", "강좌, 코스"],
+    ["court", "법원, 코트"], ["cousin", "사촌"], ["cover", "덮다, 표지"], ["crack", "깨뜨리다, 금"],
+    ["cradle", "요람"], ["craft", "공예, 기술"], ["crash", "충돌하다"], ["crawling", "기어가는"],
+    ["crazy", "미친"], ["create", "창조하다"], ["creation", "창조"], ["creative", "창의적인"],
+    ["creature", "생물"], ["credit", "신용, 외상"], ["creek", "시냇물"], ["creep", "기어가다"],
+    ["crew", "승무원, 선원"], ["crime", "범죄"], ["criminal", "범죄자"], ["crisis", "위기"],
+    ["criterion", "기준"], ["critic", "비평가"], ["critical", "비판적인, 중요한"], ["criticism", "비판"],
+    ["criticize", "비판하다"], ["crop", "작물, 농작물"], ["cross", "건너다, 십자가"], ["crowd", "군중, 무리"],
+    ["crowded", "붐비는"], ["crown", "왕관"], ["crucial", "결정적인, 중대한"], ["cruel", "잔인한"],
+    ["crush", "으깨다"], ["cry", "울다, 외침"], ["crystal", "수정, 결정"], ["cube", "정육면체"],
+    ["cucumber", "오이"], ["cultivate", "경작하다"], ["cultural", "문화의"], ["culture", "문화"],
+    ["cure", "치료하다"], ["curious", "호기심 많은"], ["currency", "통화"], ["current", "현재의, 흐름"],
+    ["curriculum", "커리큘럼"], ["curtain", "커튼"], ["curve", "곡선"], ["cushion", "쿠션"],
+    ["custom", "관습, 세관"], ["customer", "고객"], ["cut", "자르다"], ["cute", "귀여운"],
+    ["cycle", "순환, 자전거"], ["peck", "쪼아 먹다"], ["stomach", "복부, 위"], ["suffer", "고통받다"],
+    ["recall", "상기하다, 회상하다"], ["conserve", "보존하다"], ["latter", "후자의"], ["transportation", "운송, 수송"],
+    ["joint", "관절"], ["considerable", "상당한"], ["wipe", "닦다"], ["originally", "원래"],
+    ["ingredient", "구성 요소, 재료"], ["reflect", "비추다, 반사하다"], ["edit", "편집하다"], ["prepare for", "~을 대비하다"]
   ];
 
-  function generateFull1600Words() {
-    let fullList = [...baseVocabulary];
-    let prefixes = ["counter", "inter", "micro", "trans", "over", "under", "sub", "super", "pre", "post"];
-    let suffixes = ["ation", "ment", "ness", "ity", "able", "ive", "less", "ful", "ize", "ly"];
-
-    let count = 0;
-    while(fullList.length < 1600) {
-      let base = baseVocabulary[count % baseVocabulary.length];
-      let p = prefixes[count % prefixes.length];
-      let s = suffixes[count % suffixes.length];
-      let newWord = `${p}${base[0]}${s}`;
-      let newMeaning = `${base[1]} (파생 어휘 ${count + 1})`;
-      fullList.push([newWord, newMeaning]);
-      count++;
-    }
-
-    return fullList.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
+  function loadCleanVocabulary() {
+    return realVocabulary.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
   }
 
   let currentWords = [];
@@ -315,13 +384,14 @@
   let qIndex = 0;
   let userAnswers = []; 
   let timerInterval = null;
+  let isTesting = false;
 
   window.onload = function() {
     loadDayData();
   };
 
   function loadDayData() {
-    document.getElementById('wordInput').value = generateFull1600Words();
+    document.getElementById('wordInput').value = loadCleanVocabulary();
   }
 
   function startQuiz() {
@@ -333,6 +403,7 @@
 
     if (parsedWords.length < 5) return alert("최소 5개 이상의 단어가 필요합니다.");
 
+    // 입력된 단어를 섞어서 40개 문제 추출
     parsedWords.sort(() => Math.random() - 0.5);
     currentWords = parsedWords.slice(0, 40);
 
@@ -340,7 +411,7 @@
     const allWords = parsedWords.map(w => w.word);
 
     questions = currentWords.map((item) => {
-      const isWordToMeaning = Math.random() > 0.3;
+      const isWordToMeaning = Math.random() > 0.3; // 70% 확률로 영단어 -> 뜻
       let options = [];
       let correctAnswer = isWordToMeaning ? item.meaning : item.word;
       
@@ -364,6 +435,7 @@
 
     qIndex = 0;
     userAnswers = new Array(questions.length).fill(null);
+    isTesting = true;
 
     document.getElementById('screen-main').classList.add('hidden');
     document.getElementById('screen-result').classList.add('hidden');
@@ -421,7 +493,7 @@
       setTimeout(() => {
         qIndex++;
         renderQuestion();
-      }, 200);
+      }, 150);
     }
   }
 
@@ -439,10 +511,50 @@
     }
   }
 
+  // 부정행위(창 이탈/탭 이동) 감지 로직
+  function handleCheatViolation() {
+    if (!isTesting) return;
+
+    isTesting = false;
+    alert("🚨 다른 창/탭 전환이 감지되어 부정행위 방지를 위해 시험이 취소됩니다.\n4분 후 재시험에 응시할 수 있습니다.");
+
+    document.getElementById('screen-quiz').classList.add('hidden');
+    document.getElementById('screen-result').classList.remove('hidden');
+
+    const resultBadge = document.getElementById('resultBadge');
+    const resultScore = document.getElementById('resultScore');
+    const resultDesc = document.getElementById('resultDesc');
+    const timerBox = document.getElementById('timerBox');
+    const btnRetry = document.getElementById('btnRetry');
+
+    resultBadge.className = "result-badge fail";
+    resultBadge.innerText = "🚨 시험 취소 (부정행위 감지)";
+    resultScore.innerText = "0점";
+    resultDesc.innerText = "시험 중 화면을 이탈하여 시험이 중단되었습니다. 4분 후 다시 응시해 주세요.";
+    timerBox.classList.remove('hidden');
+    btnRetry.disabled = true;
+
+    startTimer(240); // 4분 타이머
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && isTesting) {
+      handleCheatViolation();
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    if (isTesting) {
+      handleCheatViolation();
+    }
+  });
+
   function finishQuiz() {
+    isTesting = false;
     const unanswered = userAnswers.filter(a => a === null).length;
     if (unanswered > 0) {
       if (!confirm(`아직 풀지 않은 문제가 ${unanswered}개 있습니다. 이대로 제출하시겠습니까?`)) {
+        isTesting = true;
         return;
       }
     }
@@ -468,20 +580,22 @@
     resultScore.innerText = `${score}점 (${correctCount} / ${questions.length} 문제 정답)`;
 
     if (score >= CUTOFF_SCORE) {
+      // 80점 이상 합격
       resultBadge.className = "result-badge pass";
       resultBadge.innerText = "🎉 통과 (PASS)";
-      resultDesc.innerText = `축하합니다! 커트라인(${CUTOFF_SCORE}점)을 넘겨 통과하셨습니다.`;
+      resultDesc.innerText = `축하합니다! 커트라인(${CUTOFF_SCORE}점)을 통과하셨습니다.`;
       timerBox.classList.add('hidden');
       btnRetry.disabled = false;
       btnRetry.innerText = "다시 응시하기";
     } else {
+      // 80점 미만 불합격 -> 4분 재시험 타이머
       resultBadge.className = "result-badge fail";
       resultBadge.innerText = "❌ 불합격 (FAIL)";
       resultDesc.innerText = `커트라인(${CUTOFF_SCORE}점)을 넘지 못했습니다. 4분 후 재시험에 응시할 수 있습니다.`;
       timerBox.classList.remove('hidden');
       btnRetry.disabled = true;
       
-      startTimer(240);
+      startTimer(240); // 4분 카운트다운
     }
   }
 
