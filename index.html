@@ -1,121 +1,513 @@
-<div class="quiz-container">
-  <!-- 1. 단어 입력 화면 -->
-  <div id="step1">
-    <h2 class="text-center">📚 나만의 단어장</h2>
-    <p style="font-size: 14px; color: #666;">단어와 뜻을 쉼표(,)로 구분해서 적어주세요. (줄바꿈으로 여러 개 입력)</p>
-    <textarea id="wordInput" class="quiz-input" rows="6" placeholder="apple, 사과&#10;banana, 바나나&#10;run, 달리다"></textarea>
-    <button class="quiz-btn" onclick="startTest()">시험 시작하기 (커트라인 80점)</button>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>단어 시험 시스템</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #0f172a;
+      --text-sub: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: var(--card);
+      width: 100%;
+      max-width: 540px;
+      border-radius: 16px;
+      padding: 28px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 20px; }
+      h1 { font-size: 1.3rem !important; }
+      .option-btn { padding: 12px 14px !important; font-size: 0.95rem !important; }
+    }
+
+    h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; color: var(--text); font-weight: 700; }
+    h2 { font-size: 1.2rem; margin-bottom: 12px; }
+    .hidden { display: none !important; }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+
+    .timer-container {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .timer-bar {
+      height: 100%;
+      background: var(--primary);
+      width: 100%;
+      transition: width 0.2s linear;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+    select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      background: #fff;
+    }
+    select:focus, textarea:focus { border-color: var(--primary); }
+
+    .question-box {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 16px;
+      background: #f8fafc;
+    }
+    .word-display { font-size: 1.8rem; font-weight: 700; color: var(--primary); margin-top: 8px; word-break: break-all; }
+
+    .options-grid { display: flex; flex-direction: column; gap: 8px; }
+    .option-btn {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .option-btn:hover { border-color: var(--primary); background: #f0f7ff; }
+
+    .result-badge {
+      font-size: 1.2rem;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 16px 0;
+      text-align: center;
+    }
+    .pass { background: #dcfce7; color: #166534; }
+    .fail { background: #fee2e2; color: #991b1b; }
+    .review-list {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.9rem;
+      text-align: left;
+      background: #f8fafc;
+    }
+    .review-item { padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
+    .review-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div id="screen-main">
+    <h1>단어 시험 시스템</h1>
+    
+    <div class="form-group">
+      <label>단어장(Day) 선택</label>
+      <select id="daySelect" onchange="loadDayData()">
+        <option value="Day 1">Day 1 (40단어)</option>
+        <option value="Day 2">Day 2 (40단어)</option>
+        <option value="Day 3">Day 3 (40단어)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>단어 편집 (단어, 뜻 순서로 입력)</label>
+      <textarea id="wordInput" rows="8" placeholder="apple, 사과&#10;banana, 바나나"></textarea>
+      <button class="btn btn-secondary" onclick="saveDayData()">현재 단어장 저장</button>
+    </div>
+
+    <div class="form-group">
+      <label>시험 전체 제한시간</label>
+      <select id="totalTimerSelect">
+        <option value="600" selected>10분 (600초)</option>
+        <option value="300">5분 (300초)</option>
+        <option value="120">2분 (120초)</option>
+        <option value="0">제한없음</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" onclick="startQuiz()">시험 시작 (커트라인 80점)</button>
   </div>
 
-  <!-- 2. 시험 보는 화면 -->
-  <div id="step2" class="hidden">
-    <h2 class="text-center">📝 단어 시험 (<span id="currentNum">1</span>/<span id="totalNum">0</span>)</h2>
-    <h1 id="questionWord" class="text-center" style="font-size: 32px; color: #4F46E5; margin: 20px 0;">단어</h1>
-    <input type="text" id="userInput" class="quiz-input" placeholder="뜻을 입력하고 엔터를 누르세요" onkeypress="if(event.keyCode==13) submitAnswer()">
-    <button class="quiz-btn" onclick="submitAnswer()">정답 확인</button>
+  <div id="screen-quiz" class="hidden">
+    <div class="timer-container" id="timerContainer">
+      <div id="timerBar" class="timer-bar"></div>
+    </div>
+
+    <div class="question-box">
+      <div style="font-size:0.85rem; color:var(--text-sub); font-weight:600;">
+        문제 <span id="qIndex">1</span> / <span id="qTotal">40</span>
+      </div>
+      <div id="questionWord" class="word-display">apple</div>
+    </div>
+
+    <div id="optionsContainer" class="options-grid"></div>
   </div>
 
-  <!-- 3. 결과 화면 -->
-  <div id="step3" class="hidden text-center">
-    <h2>🎯 시험 결과</h2>
-    <p id="scoreText" style="font-size: 18px; margin: 20px 0;"></p>
-    <div id="passText" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;"></div>
-    <div id="wrongWordsArea" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; font-size: 14px;"></div>
-    <button class="quiz-btn" onclick="location.reload()">처음으로 돌아가기</button>
+  <div id="screen-result" class="hidden">
+    <h1>시험 결과</h1>
+    <div id="scoreText" style="text-align:center; font-size:1.05rem; font-weight:600;"></div>
+    <div id="passBadge" class="result-badge"></div>
+
+    <div id="reviewSection">
+      <label style="margin-bottom:8px;">상세 답안 노트</label>
+      <div id="reviewList" class="review-list"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="showMainScreen()" style="margin-top: 16px;">처음으로 돌아가기</button>
   </div>
+
 </div>
 
-<style>
-  /* 디자인 (CSS) */
-  .quiz-container { max-width: 400px; margin: 40px auto; font-family: sans-serif; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-  .quiz-btn { width: 100%; padding: 14px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-  .quiz-btn:hover { background: #4338CA; }
-  .quiz-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; resize: none; }
-  .hidden { display: none !important; }
-  .text-center { text-align: center; }
-</style>
-
 <script>
-  /* 작동 로직 (JavaScript) */
-  let words = [];
-  let wrongWords = [];
-  let currentIndex = 0;
-  let score = 0;
+  const defaultData = {
+    "Day 1": `apple, 사과
+banana, 바나나
+cat, 고양이
+dog, 개
+egg, 계란
+fish, 물고기
+house, 집
+book, 책
+pen, 펜
+desk, 책상
+chair, 의자
+table, 탁자
+school, 학교
+teacher, 선생님
+student, 학생
+friend, 친구
+family, 가족
+water, 물
+milk, 우유
+bread, 빵
+rice, 밥
+tree, 나무
+flower, 꽃
+sun, 해
+moon, 달
+star, 별
+sky, 하늘
+rain, 비
+snow, 눈
+wind, 바람
+car, 자동차
+bus, 버스
+train, 기차
+bike, 자전거
+city, 도시
+town, 마을
+music, 음악
+game, 게임
+movie, 영화
+story, 이야기`,
 
-  function startTest() {
+    "Day 2": `door, 문
+window, 창문
+room, 방
+wall, 벽
+picture, 그림
+clock, 시계
+computer, 컴퓨터
+phone, 전화기
+paper, 종이
+pencil, 연필
+bag, 가방
+box, 상자
+hat, 모자
+clothes, 옷
+shoes, 신발
+ring, 반지
+king, 왕
+queen, 여왕
+man, 남자
+woman, 여자
+boy, 소년
+girl, 소녀
+child, 아이
+baby, 아기
+doctor, 의사
+nurse, 간호사
+police, 경찰
+driver, 운전사
+farmer, 농부
+cook, 요리사
+park, 공원
+street, 길
+river, 강
+sea, 바다
+mountain, 산
+animal, 동물
+bird, 새
+bear, 곰
+lion, 사자
+tiger, 호랑이`,
+
+    "Day 3": `morning, 아침
+afternoon, 오후
+evening, 저녁
+night, 밤
+today, 오늘
+tomorrow, 내일
+yesterday, 어제
+week, 주
+month, 월
+year, 해
+time, 시간
+hour, 시
+minute, 분
+second, 초
+spring, 봄
+summer, 여름
+autumn, 가을
+winter, 겨울
+color, 색깔
+red, 빨간색
+blue, 파란색
+yellow, 노란색
+green, 초록색
+white, 하얀색
+black, 검은색
+head, 머리
+face, 얼굴
+eye, 눈
+ear, 귀
+nose, 코
+mouth, 입
+hand, 손
+foot, 발
+arm, 팔
+leg, 다리
+heart, 마음
+mind, 정신
+idea, 생각
+dream, 꿈
+hope, 희망`
+  };
+
+  let currentWords = [];
+  let allMeanings = [];
+  let qIndex = 0;
+  let userAnswers = [];
+
+  let timerInterval = null;
+  let totalTimeLimit = 600;
+  let timeRemaining = 0;
+
+  window.onload = function() {
+    loadDayData();
+  };
+
+  function loadDayData() {
+    const day = document.getElementById('daySelect').value;
+    const saved = localStorage.getItem('vocab_' + day);
+    document.getElementById('wordInput').value = saved ? saved : (defaultData[day] || "");
+  }
+
+  function saveDayData() {
+    const day = document.getElementById('daySelect').value;
+    const text = document.getElementById('wordInput').value;
+    localStorage.setItem('vocab_' + day, text);
+    alert(`[${day}] 단어장이 저장되었습니다.`);
+  }
+
+  function startQuiz() {
     const text = document.getElementById('wordInput').value.trim();
-    if (!text) return alert('단어를 입력해주세요!');
+    if (!text) return alert("단어를 입력해 주세요.");
 
-    // 입력된 글자를 쪼개서 단어장에 넣기
-    words = text.split('\n').map(line => {
+    currentWords = text.split('\n').map(line => {
       const parts = line.split(',');
-      if(parts.length >= 2) {
-        return { word: parts[0].trim(), meaning: parts[1].trim() };
+      if(parts.length >= 2) return { word: parts[0].trim(), meaning: parts[1].trim() };
+    }).filter(item => item && item.word && item.meaning);
+
+    if (currentWords.length < 4) {
+      return alert("객관식 시험을 위해 최소 4개 이상의 단어가 필요합니다.");
+    }
+
+    allMeanings = Array.from(new Set(currentWords.map(w => w.meaning)));
+    currentWords.sort(() => Math.random() - 0.5);
+
+    qIndex = 0;
+    userAnswers = [];
+
+    document.getElementById('screen-main').classList.add('hidden');
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-quiz').classList.remove('hidden');
+
+    document.getElementById('qTotal').innerText = currentWords.length;
+
+    totalTimeLimit = parseInt(document.getElementById('totalTimerSelect').value);
+    if (totalTimeLimit > 0) {
+      document.getElementById('timerContainer').style.display = 'block';
+      startTotalTimer();
+    } else {
+      document.getElementById('timerContainer').style.display = 'none';
+    }
+
+    renderQuestion();
+  }
+
+  function startTotalTimer() {
+    timeRemaining = totalTimeLimit;
+    const timerBar = document.getElementById('timerBar');
+    timerBar.style.width = '100%';
+
+    const step = 200;
+    const totalSteps = (totalTimeLimit * 1000) / step;
+    let currentStep = 0;
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      currentStep++;
+      const remainPercent = 100 - (currentStep / totalSteps) * 100;
+      timerBar.style.width = Math.max(0, remainPercent) + '%';
+
+      if (currentStep >= totalSteps) {
+        clearInterval(timerInterval);
+        alert("10분 제한 시간이 종료되었습니다. 시험 결과로 이동합니다.");
+        finishQuiz();
       }
-    }).filter(item => item !== undefined);
-
-    if(words.length === 0) return alert('형식에 맞게 입력해주세요! (예: apple, 사과)');
-
-    // 단어 순서 랜덤으로 섞기
-    words.sort(() => Math.random() - 0.5);
-
-    document.getElementById('step1').classList.add('hidden');
-    document.getElementById('step2').classList.remove('hidden');
-    document.getElementById('totalNum').innerText = words.length;
-
-    showQuestion();
+    }, step);
   }
 
-  function showQuestion() {
-    if (currentIndex < words.length) {
-      document.getElementById('currentNum').innerText = currentIndex + 1;
-      document.getElementById('questionWord').innerText = words[currentIndex].word;
-      document.getElementById('userInput').value = '';
-      document.getElementById('userInput').focus();
-    } else {
-      showResult();
+  function renderQuestion() {
+    if (qIndex >= currentWords.length) {
+      clearInterval(timerInterval);
+      finishQuiz();
+      return;
     }
+
+    const currentItem = currentWords[qIndex];
+    document.getElementById('qIndex').innerText = qIndex + 1;
+    document.getElementById('questionWord').innerText = currentItem.word;
+
+    let options = [currentItem.meaning];
+    let otherMeanings = allMeanings.filter(m => m !== currentItem.meaning);
+    otherMeanings.sort(() => Math.random() - 0.5);
+
+    while (options.length < 4 && otherMeanings.length > 0) {
+      options.push(otherMeanings.pop());
+    }
+    options.sort(() => Math.random() - 0.5);
+
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+    options.forEach((optText, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.innerText = `${i+1}. ${optText}`;
+      btn.onclick = () => selectOption(optText);
+      container.appendChild(btn);
+    });
   }
 
-  function submitAnswer() {
-    const userAns = document.getElementById('userInput').value.trim();
-    if(userAns === '') return; // 빈칸이면 안 넘어감
+  function selectOption(selectedText) {
+    userAnswers.push({
+      word: currentWords[qIndex].word,
+      correctMeaning: currentWords[qIndex].meaning,
+      selectedMeaning: selectedText
+    });
 
-    // 정답 체크
-    if (userAns === words[currentIndex].meaning) {
-      score++;
-    } else {
-      // 틀린 단어 저장
-      wrongWords.push(`${words[currentIndex].word} (정답: ${words[currentIndex].meaning} / 내 답: ${userAns})`);
-    }
-    
-    currentIndex++;
-    showQuestion();
+    qIndex++;
+    renderQuestion();
   }
 
-  function showResult() {
-    document.getElementById('step2').classList.add('hidden');
-    document.getElementById('step3').classList.remove('hidden');
-
-    const finalScore = Math.round((score / words.length) * 100);
-    const isPass = finalScore >= 80; // 커트라인 80점
-
-    document.getElementById('scoreText').innerText = `총 ${words.length}문제 중 ${score}개 정답 (${finalScore}점)`;
-    
-    const passElement = document.getElementById('passText');
-    if(isPass) {
-      passElement.innerText = "🎉 80점 통과!";
-      passElement.style.color = "#10B981";
-    } else {
-      passElement.innerText = "❌ 재시험 (80점 미만)";
-      passElement.style.color = "#EF4444";
+  function finishQuiz() {
+    while (userAnswers.length < currentWords.length) {
+      userAnswers.push({
+        word: currentWords[userAnswers.length].word,
+        correctMeaning: currentWords[userAnswers.length].meaning,
+        selectedMeaning: "미응시 (시간초과)"
+      });
     }
 
-    const wrongArea = document.getElementById('wrongWordsArea');
-    if(wrongWords.length > 0) {
-      wrongArea.innerHTML = "<b>오답 노트:</b><br>" + wrongWords.join('<br>');
+    document.getElementById('screen-quiz').classList.add('hidden');
+    document.getElementById('screen-result').classList.remove('hidden');
+
+    let correctCount = 0;
+    userAnswers.forEach(ans => {
+      if (ans.selectedMeaning === ans.correctMeaning) {
+        correctCount++;
+      }
+    });
+
+    const total = currentWords.length;
+    const finalScore = Math.round((correctCount / total) * 100);
+    const isPass = finalScore >= 80;
+
+    document.getElementById('scoreText').innerText = `총 ${total}문제 중 ${correctCount}개 정답 (${finalScore}점)`;
+
+    const badge = document.getElementById('passBadge');
+    if (isPass) {
+      badge.innerText = "합격 (80점 이상)";
+      badge.className = "result-badge pass";
     } else {
-      wrongArea.innerHTML = "틀린 문제가 없습니다! 완벽해요 💯";
+      badge.innerText = "불합격 (80점 미만)";
+      badge.className = "result-badge fail";
     }
+
+    const reviewListDiv = document.getElementById('reviewList');
+    reviewListDiv.innerHTML = userAnswers.map((ans, idx) => {
+      const isCorrect = ans.selectedMeaning === ans.correctMeaning;
+      return `
+        <div class="review-item">
+          <b>${idx + 1}. ${ans.word}</b> - 정답: <span style="color:#166534; font-weight:600;">${ans.correctMeaning}</span> 
+          / 제출: <span style="color:${isCorrect ? '#166534' : '#991b1b'}; font-weight:600;">${ans.selectedMeaning}</span>
+          ${isCorrect ? '⭕' : '❌'}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showMainScreen() {
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-main').classList.remove('hidden');
   }
 </script>
+
+</body>
+</html>
