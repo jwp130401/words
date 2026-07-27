@@ -1,0 +1,121 @@
+<div class="quiz-container">
+  <!-- 1. 단어 입력 화면 -->
+  <div id="step1">
+    <h2 class="text-center">📚 나만의 단어장</h2>
+    <p style="font-size: 14px; color: #666;">단어와 뜻을 쉼표(,)로 구분해서 적어주세요. (줄바꿈으로 여러 개 입력)</p>
+    <textarea id="wordInput" class="quiz-input" rows="6" placeholder="apple, 사과&#10;banana, 바나나&#10;run, 달리다"></textarea>
+    <button class="quiz-btn" onclick="startTest()">시험 시작하기 (커트라인 80점)</button>
+  </div>
+
+  <!-- 2. 시험 보는 화면 -->
+  <div id="step2" class="hidden">
+    <h2 class="text-center">📝 단어 시험 (<span id="currentNum">1</span>/<span id="totalNum">0</span>)</h2>
+    <h1 id="questionWord" class="text-center" style="font-size: 32px; color: #4F46E5; margin: 20px 0;">단어</h1>
+    <input type="text" id="userInput" class="quiz-input" placeholder="뜻을 입력하고 엔터를 누르세요" onkeypress="if(event.keyCode==13) submitAnswer()">
+    <button class="quiz-btn" onclick="submitAnswer()">정답 확인</button>
+  </div>
+
+  <!-- 3. 결과 화면 -->
+  <div id="step3" class="hidden text-center">
+    <h2>🎯 시험 결과</h2>
+    <p id="scoreText" style="font-size: 18px; margin: 20px 0;"></p>
+    <div id="passText" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;"></div>
+    <div id="wrongWordsArea" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; font-size: 14px;"></div>
+    <button class="quiz-btn" onclick="location.reload()">처음으로 돌아가기</button>
+  </div>
+</div>
+
+<style>
+  /* 디자인 (CSS) */
+  .quiz-container { max-width: 400px; margin: 40px auto; font-family: sans-serif; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .quiz-btn { width: 100%; padding: 14px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+  .quiz-btn:hover { background: #4338CA; }
+  .quiz-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; resize: none; }
+  .hidden { display: none !important; }
+  .text-center { text-align: center; }
+</style>
+
+<script>
+  /* 작동 로직 (JavaScript) */
+  let words = [];
+  let wrongWords = [];
+  let currentIndex = 0;
+  let score = 0;
+
+  function startTest() {
+    const text = document.getElementById('wordInput').value.trim();
+    if (!text) return alert('단어를 입력해주세요!');
+
+    // 입력된 글자를 쪼개서 단어장에 넣기
+    words = text.split('\n').map(line => {
+      const parts = line.split(',');
+      if(parts.length >= 2) {
+        return { word: parts[0].trim(), meaning: parts[1].trim() };
+      }
+    }).filter(item => item !== undefined);
+
+    if(words.length === 0) return alert('형식에 맞게 입력해주세요! (예: apple, 사과)');
+
+    // 단어 순서 랜덤으로 섞기
+    words.sort(() => Math.random() - 0.5);
+
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
+    document.getElementById('totalNum').innerText = words.length;
+
+    showQuestion();
+  }
+
+  function showQuestion() {
+    if (currentIndex < words.length) {
+      document.getElementById('currentNum').innerText = currentIndex + 1;
+      document.getElementById('questionWord').innerText = words[currentIndex].word;
+      document.getElementById('userInput').value = '';
+      document.getElementById('userInput').focus();
+    } else {
+      showResult();
+    }
+  }
+
+  function submitAnswer() {
+    const userAns = document.getElementById('userInput').value.trim();
+    if(userAns === '') return; // 빈칸이면 안 넘어감
+
+    // 정답 체크
+    if (userAns === words[currentIndex].meaning) {
+      score++;
+    } else {
+      // 틀린 단어 저장
+      wrongWords.push(`${words[currentIndex].word} (정답: ${words[currentIndex].meaning} / 내 답: ${userAns})`);
+    }
+    
+    currentIndex++;
+    showQuestion();
+  }
+
+  function showResult() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+
+    const finalScore = Math.round((score / words.length) * 100);
+    const isPass = finalScore >= 80; // 커트라인 80점
+
+    document.getElementById('scoreText').innerText = `총 ${words.length}문제 중 ${score}개 정답 (${finalScore}점)`;
+    
+    const passElement = document.getElementById('passText');
+    if(isPass) {
+      passElement.innerText = "🎉 80점 통과!";
+      passElement.style.color = "#10B981";
+    } else {
+      passElement.innerText = "❌ 재시험 (80점 미만)";
+      passElement.style.color = "#EF4444";
+    }
+
+    const wrongArea = document.getElementById('wrongWordsArea');
+    if(wrongWords.length > 0) {
+      wrongArea.innerHTML = "<b>오답 노트:</b><br>" + wrongWords.join('<br>');
+    } else {
+      wrongArea.innerHTML = "틀린 문제가 없습니다! 완벽해요 💯";
+    }
+  }
+</script>
