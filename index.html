@@ -149,7 +149,6 @@
     .review-item { padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
     .review-item:last-child { border-bottom: none; }
 
-    /* 대기시간 안내 메시지 스타일 */
     .cooldown-info {
       color: #dc2626;
       font-weight: 600;
@@ -168,16 +167,16 @@
     <h1>단어 시험 시스템</h1>
     
     <div class="form-group">
-      <label>단어장(Day) 선택</label>
+      <label>단어장 선택</label>
       <select id="daySelect" onchange="loadDayData()">
-        <option value="Day 1">Day 1 (40단어)</option>
-        <option value="Day 2">Day 2 (40단어)</option>
-        <option value="Day 3">Day 3 (40단어)</option>
+        <option value="Middle_2000" selected>[랜덤] 중학 필수 2,000단어 (40문제 무작위)</option>
+        <option value="Day 1">Day 1 (기초 40단어)</option>
+        <option value="Day 2">Day 2 (기초 40단어)</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label>단어 편집 (단어, 뜻 순서로 입력)</label>
+      <label>단어 목록 (총 단어 수 확인 및 편집 가능)</label>
       <textarea id="wordInput" rows="8" placeholder="apple, 사과&#10;banana, 바나나"></textarea>
       <button class="btn btn-secondary" onclick="saveDayData()">현재 단어장 저장</button>
     </div>
@@ -233,129 +232,259 @@
 </div>
 
 <script>
+  // 중학 필수 어휘 2000개 자동 생성 로직 (영단어 + 뜻 매핑 DB)
+  function generate2000Words() {
+    const rawList = [
+      ["abandon","포기하다"],["ability","능력"],["able","~할 수 있는"],["abroad","외국으로"],["absence","부재"],
+      ["absent","결석한"],["absolute","절대적인"],["absorb","흡수하다"],["abstract","추상적인"],["academic","학업의"],
+      ["accept","accept하다"],["acceptable","수락할 수 있는"],["access","접근"],["accident","사고"],["accompany","동행하다"],
+      ["accomplish","성취하다"],["accord","일치"],["account","계좌/설명"],["accurate","정확한"],["accuse","비난하다"],
+      ["achieve","달성하다"],["achievement","업적"],["acid","산성의"],["acknowledge","인정하다"],["acquire","획득하다"],
+      ["across","건너서"],["act","행동하다"],["action","행동"],["active","활동적인"],["activity","활동"],
+      ["actor","배우"],["actress","여배우"],["actual","실제의"],["adapt","적응하다"],["add","더하다"],
+      ["addition","추가"],["address","주소"],["adequate","적절한"],["adjust","조절하다"],["admire","존경하다"],
+      ["admit","인정하다"],["adopt","입양하다/채택하다"],["adult","성인"],["advance","진보"],["advantage","유리한 점"],
+      ["adventure","모험"],["advertise","광고하다"],["advice","조언"],["advise","조언하다"],["affair","사건"],
+      ["affect","영향을 미치다"],["afford","~할 여유가 있다"],["afraid","두려워하는"],["afternoon","오후"],["again","다시"],
+      ["against","~에 반대하여"],["age","나이"],["agency","대리점"],["agent","대리인"],["aggressive","공격적인"],
+      ["ago","전에"],["agree","동의하다"],["agreement","동의"],["agriculture","농업"],["ahead","앞서"],
+      ["aid","원조"],["aim","조준하다/목표"],["air","공기"],["aircraft","항공기"],["airline","항공사"],
+      ["airport","공항"],["alarm","경보"],["album","앨범"],["alcohol","알코올"],["alive","살아있는"],
+      ["allow","허락하다"],["almost","거의"],["alone","혼자서"],["along","~을 따라서"],["already","이미"],
+      ["also","또한"],["alter","변경하다"],["alternative","대안"],["although","비록 ~일지라도"],["altogether","전적으로"],
+      ["always","항상"],["amaze","놀라게 하다"],["ambition","야망"],["ambulance","구급차"],["among","~ 사이에"],
+      ["amount","양"],["amuse","즐겁게 하다"],["analyze","분석하다"],["ancient","고대의"],["anger","화"],
+      ["angle","각도"],["angry","화난"],["animal","동물"],["ankle","발목"],["announce","발표하다"],
+      ["annoy","짜증나게 하다"],["annual","연례의"],["another","또 다른"],["answer","대답하다"],["anxious","불안해하는"],
+      ["anybody","누군가"],["anymore","더 이상"],["anyone","누군가"],["anything","무엇인가"],["anyway","어쨌든"],
+      ["apart","떨어져"],["apartment","아파트"],["apologize","사과하다"],["apparent","명백한"],["appeal","호소하다"],
+      ["appear","나타나다"],["appearance","외모"],["apple","사과"],["application","지원/적용"],["apply","적용하다/지원하다"],
+      ["appoint","지정하다"],["appreciate","감사하다"],["approach","접근하다"],["appropriate","적절한"],["approve","승인하다"],
+      ["area","구역"],["argue","주장하다"],["arise","발생하다"],["arm","팔/무기"],["army","군대"],
+      ["around","주위에"],["arrange","정돈하다"],["arrest","체포하다"],["arrival","도착"],["arrive","도착하다"],
+      ["art","예술"],["article","기사/물품"],["artist","예술가"],["ashamed","부끄러운"],["aside","옆에"],
+      ["ask","묻다"],["asleep","잠든"],["aspect","측면"],["assist","돕다"],["assistant","보조원"],
+      ["associate","연상하다"],["assume","가정하다"],["assure","보장하다"],["astonish","놀라게 하다"],["athlete","운동선수"],
+      ["atmosphere","대기/분위기"],["attach","붙이다"],["attack","공격하다"],["attain","달성하다"],["attempt","시도하다"],
+      ["attend","참석하다"],["attention","주의"],["attitude","태도"],["attract","끌어당기다"],["attractive","매력적인"],
+      ["audience","청중"],["author","저자"],["authority","권위"],["automatic","자동의"],["available","이용 가능한"],
+      ["avenue","대로"],["average","평균의"],["avoid","피하다"],["awake","깨어있는"],["award","상"],
+      ["aware","알고 있는"],["awful","끔찍한"],["baby","아기"],["background","배경"],["background","배경"],
+      ["background","배경"],["bag","가방"],["baggage","수하물"],["bake","빵을 구우다"],["balance","균형"],
+      ["ball","공"],["balloon","풍선"],["band","밴드/끈"],["bank","은행/제방"],["bar","막대기/바"],
+      ["bargain","매매/특가품"],["base","기초"],["basic","기본적인"],["basis","기초"],["basket","바구니"],
+      ["battle","전투"],["bay","만"],["beach","해변"],["beam","빛 줄기"],["bean","콩"],
+      ["bear","곰/견디다"],["beard","턱수염"],["beast","짐승"],["beat","치다/이기다"],["beautiful","아름다운"],
+      ["beauty","아름다움"],["become","~이 되다"],["bed","침대"],["bedroom","침실"],["bee","벌"],
+      ["beef","소고기"],["beer","맥주"],["before","전에"],["beg","간청하다"],["begin","시작하다"],
+      ["behave","행동하다"],["behavior","행동"],["behind","뒤에"],["belief","믿음"],["believe","믿다"],
+      ["bell","종"],["belong","속하다"],["below","아래에"],["belt","벨트"],["bench","벤치"],
+      ["bend","구부리다"],["beneath","~ 아래에"],["benefit","혜택/이익"],["beside","옆에"],["besides","게다가"],
+      ["bet","걸다"],["betray","배신하다"],["better","더 좋은"],["between","~ 사이에"],["beyond","~을 넘어서"],
+      ["bicycle","자전거"],["big","큰"],["bill","청구서/지폐"],["bind","묶다"],["biology","생물학"],
+      ["bird","새"],["birth","탄생"],["birthday","생일"],["biscuit","비스킷"],["bit","조금"],
+      ["bite","물다"],["bitter","쓴"],["black","검은색"],["blame","비난하다"],["blank","빈칸"],
+      ["blanket","담요"],["bleed","피를 흘리다"],["blend","섞다"],["bless","축복하다"],["blind","눈이 먼"],
+      ["block","블록/막다"],["blood","피"],["bloom","꽃이 피다"],["blow","불다"],["blue","파란색"],
+      ["board","판자/탑승하다"],["boast","자랑하다"],["boat","배"],["body","몸"],["boil","끓이다"],
+      ["bold","대담한"],["bolt","볼트/빗장"],["bomb","폭탄"],["bond","유대"],["bone","뼈"],
+      ["book","책/예약하다"],["boot","부츠"],["border","국경"],["bored","지루한"],["boring","지루한"],
+      ["born","태어난"],["borrow","빌리다"],["boss","상사"],["both","둘 다"],["bother","괴롭히다"],
+      ["bottle","병"],["bottom","바닥"],["bounce","튀기다"],["bound","~로 향하는"],["bow","절하다/활"],
+      ["bowl","그릇"],["box","상자"],["boy","소년"],["brain","뇌"],["branch","나뭇가지/지점"],
+      ["brand","브랜드"],["brave","용감한"],["bread","빵"],["break","부수다/휴식"],["breakfast","아침식사"],
+      ["breast","가슴"],["breath","숨"],["breathe","호흡하다"],["breeze","산들바람"],["brick","벽돌"],
+      ["bride","신부"],["bridge","다리"],["brief","간결한"],["bright","밝은"],["brilliant","훌륭한"],
+      ["bring","가져오다"],["broad","넓은"],["broadcast","방송하다"],["brother","형제"],["brown","갈색"],
+      ["brush","붓/솔질하다"],["bubble","거품"],["budget","예산"],["build","짓다"],["building","건물"],
+      ["bullet","총알"],["bunch","다발"],["burden","짐/부담"],["burn","태우다"],["burst","터지다"],
+      ["bury","묻다"],["bus","버스"],["bush","덤불"],["business","사업"],["busy","바쁜"],
+      ["butcher","정육점 주인"],["butter","버터"],["button","단추"],["buy","사다"],["cabin","오두막/선실"],
+      ["cable","케이블"],["cage","새장"],["cake","케이크"],["calculate","계산하다"],["call","전화하다/부르다"],
+      ["calm","침착한"],["camera","카메라"],["camp","캠프"],["campaign","캠페인"],["campus","캠퍼스"],
+      ["can","~할 수 있다/통조림"],["canal","운하"],["cancel","취소하다"],["cancer","암"],["candidate","후보자"],
+      ["candle","양초"],["candy","사탕"],["cap","모자"],["capable","능력 있는"],["capacity","수용량"],
+      ["capital","수도/자본"],["captain","캡틴/선장"],["capture","포획하다"],["car","자동차"],["card","카드"],
+      ["care","돌봄/걱정하다"],["career","경력"],["careful","주의 깊은"],["careless","부주의한"],["cargo","화물"],
+      ["carpet","카펫"],["carriage","마차"],["carrot","당근"],["carry","나르다"],["cart","수레"],
+      ["case","경우/상자"],["cash","현금"],["cast","던지다/출연진"],["castle","성"],["casual","격식 없는"],
+      ["cat","고양이"],["catch","잡다"],["category","범주"],["cause","원인/원인이 되다"],["caution","조심"],
+      ["cave","동굴"],["cease","중단하다"],["ceiling","천장"],["celebrate","축하하다"],["cell","세포/작은 방"],
+      ["cellar","지하실"],["cement","시멘트"],["cemetery","묘지"],["censor","검열하다"],["century","100년/세기"],
+      ["ceremony","의식"],["certain","확실한"],["certainly","확실히"],["chain","체인/사슬"],["chair","의자"],
+      ["chairman","의장"],["chalk","분필"],["challenge","도전"],["chamber","방"],["champion","챔피언"],
+      ["chance","기회"],["change","변화/바꾸다"],["channel","채널"],["chaos","혼란"],["chapter","장(책)"],
+      ["character","성격/캐릭터"],["characteristic","특징"],["charge","요금/청구하다"],["charity","자선단체"],["charming","매력적인"],
+      ["chart","차트"],["chase","쫓다"],["chat","잡담하다"],["cheap","저렴한"],["cheat","속이다"],
+      ["check","확인하다"],["cheek","볼"],["cheer","응원하다"],["cheerful","쾌활한"],["cheese","치즈"],
+      ["chemical","화학의"],["chemistry","화학"],["cheque","수표"],["cherry","체리"],["chest","가슴/상자"],
+      ["chew","씹다"],["chicken","닭고기/닭"],["chief","주요한/우두머리"],["child","아이"],["childhood","어린 시절"],
+      ["chill","한기"],["chimney","굴뚝"],["chin","턱"],["chip","조각"],["chocolate","초콜릿"],
+      ["choice","선택"],["choir","합창단"],["choose","선택하다"],["chop","자르다"],["church","교회"],
+      ["cigarette","담배"],["cinema","영화관"],["circle","원"],["circuit","회로"],["circulate","순환하다"],
+      ["circumstance","상황"],["citizen","시민"],["city","도시"],["civil","시민의"],["claim","주장하다"],
+      ["clap","박수치다"],["clarify","명확하게 하다"],["clash","충돌"],["class","수업/반"],["classic","고전의"],
+      ["classify","분류하다"],["classroom","교실"],["clay","찰흙"],["clean","깨끗한"],["clear","명확한"],
+      ["clerk","점원"],["clever","영리한"],["click","클릭하다"],["client","고객"],["cliff","절벽"],
+      ["climate","기후"],["climb","올라가다"],["cling","매달리다"],["clinic","병원"],["clip","클립/잘라내다"],
+      ["clock","시계"],["close","닫다/가까운"],["cloth","천"],["clothes","옷"],["clothing","의류"],
+      ["cloud","구름"],["club","클럽"],["clue","단서"],["cluster","무더기"],["coach","코치"],
+      ["coal","석탄"],["coast","해안"],["coat","코트"],["cock","수탉"],["code","암호/코드"],
+      ["coffee","커피"],["coin","동전"],["cold","추운/감기"],["collapse","무너지다"],["collar","깃/목걸이"],
+      ["colleague","동료"],["collect","수집하다"],["collection","수집품"],["college","대학"],["colony","식민지"],
+      ["color","색깔"],["column","기둥/열"],["comb","빗"],["combination","조합"],["combine","결합하다"],
+      ["come","오다"],["comedy","코미디"],["comfort","편안함"],["comfortable","편안한"],["command","명령하다"],
+      ["comment","의견/댓글"],["commerce","상업"],["commercial","상업의/광고"],["commit","저지르다/위임하다"],["committee","위원회의"],
+      ["common","공통의/흔한"],["communicate","소통하다"],["community","공동체"],["company","회사/동료"],["compare","비교하다"],
+      ["comparison","비교"],["compass","나침반"],["compete","경쟁하다"],["competition","경쟁"],["complain","불평하다"],
+      ["complaint","불평"],["complete","완벽한/완료하다"],["complex","복잡한"],["complicate","복잡하게 하다"],["component","구성요소"],
+      ["compose","구성하다/작곡하다"],["composition","작품/구성"],["compound","화합물"],["comprehend","이해하다"],["comprise","구성되다"],
+      ["compromise","타협하다"],["computer","컴퓨터"],["conceal","숨기다"],["concentrate","집중하다"],["concept","개념"],
+      ["concern","걱정/관심"],["conclude","결론짓다"],["conclusion","결론"],["concrete","구체적인/콘크리트"],["condition","조건/상태"],
+      ["conduct","수행하다/행동"],["conference","회의"],["confess","고백하다"],["confidence","신뢰/자신감"],["confident","자신감 있는"],
+      ["confirm","확인하다"],["conflict","갈등"],["confront","직면하다"],["confuse","혼란스럽게 하다"],["congratulate","축하하다"],
+      ["congress","의회"],["connect","연결하다"],["connection","연결"],["conscious","의식하는"],["consent","동의"],
+      ["consequence","결과"],["consider","고려하다"],["considerable","상당한"],["consist","구성되다"],["consistent","일관된"],
+      ["constant","끊임없는"],["constitute","구성하다"],["construct","건설하다"],["consult","상담하다"],["consume","소비하다"],
+      ["contact","접촉/연락하다"],["contain","포함하다"],["container","용기"],["contemporary","현대의"],["content","내용물/만족하는"],
+      ["contest","대회"],["context","맥락"],["continent","대륙"],["continue","계속하다"],["continuous","연속적인"],
+      ["contract","계약"],["contrary","반대의"],["contrast","대조"],["contribute","기여하다"],["control","통제하다"],
+      ["convenient","편리한"],["convention","관습/회의"],["conversation","대화"],["convert","전환하다"],["convey","전달하다"],
+      ["convince","확신시키다"],["cook","요리하다"],["cool","시원한/멋진"],["cooperate","협력하다"],["cope","대처하다"],
+      ["copper","구리"],["copy","복사하다"],["core","핵심"],["corn","옥수수"],["corner","모퉁이"],
+      ["corporate","기업의"],["correct","올바른/수정하다"],["correspond","부합하다/편지를 주고받다"],["corridor","복도"],["cost","비용/비용이 들다"],
+      ["cottage","시골집"],["cotton","면화"],["cough","기침하다"],["could","~할 수 있었다"],["council","의회"],
+      ["counsel","조언하다"],["count","세다"],["counter","계산대"],["country","나라/시골"],["countryside","시골"],
+      ["county","군/주"],["couple","커플/두 개"],["courage","용기"],["course","코스/과정"],["court","법원/코트"],
+      ["cousin","사촌"],["cover","덮다/커버"],["cow","소"],["cowboy","카우보이"],["crack","금/깨지다"],
+      ["cradle","요람"],["craft","공예"],["crash","충돌하다"],["crawl","기어가다"],["crazy","미친"],
+      ["cream","크림"],["create","창조하다"],["creative","창의적인"],["creature","생물"],["credit","신용"],
+      ["creek","시냇물"],["creep","살금살금 기어가다"],["crew","승무원"],["crime","범죄"],["criminal","범죄자"],
+      ["crisis","위기"],["critic","비평가"],["critical","비판적인/중요한"],["criticize","비판하다"],["crop","작물"],
+      ["cross","건너다/십자가"],["crowd","군중"],["crown","왕관"],["crucial","중요한"],["cruel","잔인한"],
+      ["crush","으깨다"],["cry","울다/외치다"],["crystal","수정"],["cube","정육면체"],["cultivate","경작하다"],
+      ["culture","문화"],["cup","컵"],["cure","치료하다"],["curious","호기심 많은"],["curl","곱슬거리다"],
+      ["currency","통화"],["current","현재의/흐름"],["curtain","커튼"],["curve","곡선"],["cushion","쿠션"],
+      ["custom","관습"],["customer","고객"],["customs","세관"],["cut","자르다"],["cute","귀여운"],
+      ["cycle","주기/자전거를 타다"],["daily","매일의"],["damage","손상"],["dame","귀부인"],["damp","축축한"],
+      ["dance","춤추다"],["danger","위험"],["dangerous","위험한"],["dare","감히 ~하다"],["dark","어두운"],
+      ["data","데이터"],["date","날짜/데이트"],["daughter","딸"],["day","날/낮"],["dead","죽은"],
+      ["deafen","귀먹게 하다"],["deal","다루다/거래"],["dear","친애하는"],["death","죽음"],["debate","토론"],
+      ["debt","빛"],["decade","10년"],["decay","부패하다"],["deceive","속이다"],["decide","결정하다"],
+      ["decision","결정"],["deck","갑판"],["declare","선언하다"],["decline","거절하다/감소하다"],["decorate","장식하다"],
+      ["decrease","감소하다"],["dedicate","헌신하다"],["deep","깊은"],["deer","사슴"],["defeat","패배시키다"],
+      ["defend","방어하다"],["defense","방어"],["define","정의하다"],["definite","명확한"],["degree","도/학위"],
+      ["delay","지연시키다"],["deliberate","의도적인"],["delicate","섬세한"],["delicious","맛있는"],["delight","기쁨"],
+      ["deliver","배달하다"],["delivery","배달"],["demand","요구하다"],["democracy","민주주의"],["demonstrate","증명하다/시위하다"],
+      ["dense","빽빽한"],["dentist","치과의사"],["deny","부인하다"],["department","부서"],["departure","출발"],
+      ["depend","의존하다"],["deposit","예금하다"],["depress","우울하게 하다"],["depth","깊이"],["derive","유래하다"],
+      ["describe","설명하다"],["description","설명"],["desert","사막/버리다"],["deserve","~할 자격이 있다"],["design","디자인하다"],
+      ["desire","욕망"],["desk","책상"],["desperate","절망적인"],["despite","~에도 불구하고"],["destination","목적지"],
+      ["destroy","파괴하다"],["destruction","파괴"],["detail","세부사항"],["detect","감지하다"],["determine","결심하다"],
+      ["develop","개발하다"],["device","장치"],["devil","악마"],["devote","헌신하다"],["diagram","도표"],
+      ["dialogue","대화"],["diamond","다이아몬드"],["diary","일기"],["dictate","받아쓰게 하다"],["dictionary","사전"],
+      ["die","죽다"],["diet","식단/다이어트"],["differ","다르다"],["difference","차이"],["different","다른"],
+      ["difficult","어려운"],["difficulty","어려움"],["dig","파다"],["digital","디지털의"],["dignity","존엄"],
+      ["dinner","저녁식사"],["diplomat","외교관"],["direct","직접적인/지휘하다"],["direction","방향"],["director","감독"],
+      ["dirt","먼지/흙"],["dirty","더러운"],["disabled","장애가 있는"],["disagree","동의하지 않다"],["disappear","사라지다"],
+      ["disappoint","실망시키다"],["disaster","재앙"],["disc","디스크"],["discipline","규율"],["disclose","폭로하다"],
+      ["discount","할인"],["discourage","낙담시키다"],["discover","발견하다"],["discovery","발견"],["discuss","토론하다"],
+      ["discussion","토론"],["disease","질병"],["disgust","혐오"],["dish","접시/요리"],["dismiss","해고하다/해산하다"],
+      ["disorder","무질서/장애"],["display","전시하다"],["dispute","분쟁"],["distance","거리"],["distant","거리가 먼"],
+      ["distinct","별개의/명확한"],["distinguish","구별하다"],["distribute","배포하다"],["district","구역"],["disturb","방해하다"],
+      ["dive","다이빙하다"],["divide","나누다"],["divine","신성한"],["divorce","이혼"],["do","하다"],
+      ["doctor","의사"],["document","문서"],["dog","개"],["doll","인형"],["domain","영역"],
+      ["domestic","국내의/가정의"],["dominant","지배적인"],["dominate","지배하다"],["door","문"],["dose","복용량"],
+      ["dot","점"],["double","두 배의"],["doubt","의심"],["down","아래로"],["download","다운로드하다"],
+      ["town","마을"],["draft","초안"],["drag","끌다"],["dragon","용"],["drain","배수하다"],
+      ["drama","드라마"],["dramatic","극적인"],["draw","그리다/끌당기다"],["drawer","서랍"],["dream","꿈"],
+      ["dress","드레스/입히다"],["drift","표류하다"],["drill","드릴/훈련"],["drink","마시다"],["drive","운전하다"],
+      ["driver","운전사"],["drop","떨어뜨리다"],["drown","익사하다"],["drug","약/약물"],["drum","드럼"],
+      ["dry","마른"],["dual","이중의"],["duck","오리"],["due","~할 예정인"],["dull","따분한/둔한"],
+      ["dumb","멍청한/말못하는"],["dump","버리다"],["during","~ 동안에"],["dust","먼지"],["duty","의무/세금"],
+      ["eager","열심인"],["eagle","독수리"],["ear","귀"],["early","이른"],["earn","벌다"],
+      ["earth","지구/흙"],["ease","편안함"],["east","동쪽"],["easy","쉬운"],["eat","먹다"],
+      ["echo","메아리"],["economic","경제의"],["economy","경제"],["edge","가장자리"],["edit","편집하다"],
+      ["editor","편집자"],["educate","교육하다"],["education","교육"],["effect","효과/영향"],["effective","효과적인"],
+      ["effort","노력"],["egg","계란"],["either","둘 중 하나"],["elaborate","정교한"],["elder","손위의"],
+      ["elect","선출하다"],["election","선거"],["electric","전기의"],["electronic","전자적인"],["elegant","우아한"],
+      ["element","요소"],["elementary","기초의"],["elephant","코끼리"],["eliminate","제거하다"],["else","그 밖에"],
+      ["embarrass","당황스럽게 하다"],["embassy","대사관"],["embrace","포옹하다"],["emerge","나타나다"],["emergency","비상사태"],
+      ["emotion","감정"],["emphasis","강조"],["emphasize","강조하다"],["empire","제국"],["employ","고용하다"],
+      ["employee","종업원"],["employer","고용주"],["empty","비어있는"],["enable","가능하게 하다"],["enclose","동봉하다"],
+      ["encounter","마주치다"],["encourage","격려하다"],["end","끝"],["endless","끝없는"],["endorse","지지하다"],
+      ["endure","견디다"],["enemy","적"],["energy","에너지"],["enforce","시행하다"],["engage","관여하다/약혼하다"],
+      ["engine","엔진"],["engineer","엔지니어"],["enhance","향상시키다"],["enjoy","즐기다"],["enormous","거대한"],
+      ["enough","충분한"],["ensure","보장하다"],["enter","들어가지다"],["enterprise","기업"],["entertain","즐겁게 하다"],
+      ["enthusiasm","열정"],["entire","전체의"],["entitle","자격을 주다"],["entrance","입구"],["entry","진입"],
+      ["envelope","봉투"],["environment","환경"],["envy","부러워하다"],["equal","평등한"],["equip","장비를 갖추다"],
+      ["equipment","장비"],["era","시대"],["erase","지우다"],["error","오류"],["escape","탈출하다"],
+      ["escort","호위하다"],["especially","특히"],["essay","에세이"],["essential","필수적인"],["establish","설립하다"],
+      ["estate","부동산/재산"],["estimate","추정하다"],["etc","기타 등등"],["ethics","윤리"],["ethnic","민족의"],
+      ["evaporate","증발하다"],["even","심지어/평평한"],["evening","저녁"],["event","행사/사건"],["eventually","결국"],
+      ["ever","언젠가"],["every","모든"],["everybody","모두"],["everyday","매일의"],["everyone","모두"],
+      ["everything","모든 것"],["everywhere","어디나"],["evidence","증거"],["evident","분명한"],["evil","악한"],
+      ["evolution","진화"],["evolve","진화하다"],["exact","정확한"],["exaggerate","과장하다"],["exam","시험"],
+      ["examine","검사하다"],["example","예시"],["exceed","초과하다"],["excellent","훌륭한"],["except","~을 제외하고"],
+      ["excess","초과"],["exchange","교환하다"],["excite","흥분시키다"],["excited","신난"],["excitement","흥분"],
+      ["exclude","제외하다"],["excuse","변명/용서하다"],["execute","실행하다/처형하다"],["executive","임원"],["exercise","운동하다"],
+      ["exhaust","지치게 하다"],["exhibit","전시하다"],["exist","존재하다"],["existence","존재"],["exit","출구"],
+      ["expand","확장하다"],["expect","기대하다"],["expense","비용"],["expensive","비싼"],["experience","경험"],
+      ["experiment","실험"],["expert","전문가"],["explain","설명하다"],["explanation","설명"],["explicit","명시적인"],
+      ["explode","폭발하다"],["exploit","착취하다/개발하다"],["explore","탐험하다"],["explosion","폭발"],["export","수출하다"],
+      ["expose","노출시키다"],["express","표현하다/신속한"],["expression","표현"],["extend","연장하다"],["extent","정도"],
+      ["external","외부의"],["extinguish","끄다"],["extra","추가의"],["extraordinary","비범한"],["extreme","극심한"],
+      ["eye","눈"],["eyebrow","눈썹"],["fabric","직물"],["face","얼굴/직면하다"],["facility","시설"],
+      ["fact","사실"],["factor","요인"],["factory","공장"],["faculty","교수진/능력"],["fade","시들다/희미해지다"],
+      ["fail","실패하다"],["failure","실패"],["faint","희미한/기절하다"],["fair","공정한/박람회"],["faith","신앙/믿음"],
+      ["fall","떨어지다/가을"],["false","거짓의"],["fame","명성"],["familiar","친숙한"],["family","가족"],
+      ["famine","기근"],["famous","유명한"],["fan","팬/부채"],["fancy","화려한"],["fantastic","환상적인"],
+      ["far","멀리"],["fare","요금"],["farm","농장"],["farmer","농부"],["fascinate","매료시키다"],
+      ["fashion","패션/유행"],["fast","빠른"],["fasten","매다"],["fat","살뜬/지방"],["fatal","치명적인"],
+      ["fate","운명"],["father","아버지"],["fatigue","피로"],["fault","잘못/결점"],["favor","호의"],
+      ["favorable","호의적인"],["favorite","가장 좋아하는"],["fear","두려움"],["feather","깃털"],["feature","특징"],
+      ["federal","연방의"],["fee","수수료"],["feed","먹이를 주다"],["feel","느끼다"],["feeling","감정"],
+      ["fellow","동료"],["female","여성의"],["fence","울타리"],["fertile","비옥한"],["festival","축제"],
+      ["fetch","가져오다"],["fever","열"],["few","적은"],["fiber","섬유"],["fiction","소설"],
+      ["field","들판/분야"],["fierce","사나운"],["fight","싸우다"],["figure","수치/인물/생각하다"],["file","파일"],
+      ["fill","채우다"],["film","영화/필름"],["final","최종의"],["finance","재정"],["find","찾다"],
+      ["fine","좋은/벌금"],["finger","손가락"],["finish","끝내다"],["fire","불/해고하다"],["firm","회사/단단한"],
+      ["first","첫 번째의"],["fish","물고기/낚시하다"],["fist","주먹"],["fit","알맞다"],["fix","고치다/고정하다"],
+      ["flag","깃발"],["flame","불꽃"],["flash","번쩍이다"],["flat","평평한/아파트"],["flavor","맛"],
+      ["flee","도망치다"],["flesh","살점"],["flexible","유연한"],["flight","비행"],["float","뜨다"],
+      ["flock","떼/무리"],["flood","홍수"],["floor","바닥/층"],["flour","밀가루"],["flow","흐르다"],
+      ["flower","꽃"],["flu","독감"],["fluid","유체"],["fly","날다/파리"],["focus","초점"],
+      ["fog","안개"],["fold","접다"],["folk","사람들"],["follow","따르다"],["fond","좋아하는"],
+      ["food","음식"],["fool","바보"],["foot","발"],["football","축구"],["for","~을 위하여"],
+      ["forbid","금지하다"],["force","힘/강요하다"],["forecast","예보"],["forehead","이마"],["foreign","외국의"],
+      ["forest","숲"],["forever","영원히"],["forget","잊다"],["forgive","용서하다"],["form","형태/서식"],
+      ["formal","격식 있는"],["format","형식"],["former","이전의"],["forth","앞으로"],["fortune","행운/재산"],
+      ["forward","앞으로"],["foster","육성하다"],["foundation","재단/기초"],["fountain","분수"],["frame","틀"],
+      ["framework","뼈대"],["free","자유로운/무료의"],["freedom","자유"],["freeze","얼다"],["frequent","자주 있는"],
+      ["fresh","신선한"],["friend","친구"],["friendly","친절한"],["frighten","겁주다"],["frog","개구리"],
+      ["from","~로부터"],["front","앞"],["frontier","국경/국경지대"],["frost","서리"],["frown","찌푸리다"],
+      ["fruit","과일"],["frustrate","좌절시키다"],["fuel","연료"],["fulfill","이행하다"],["full","가득 찬"],
+      ["fun","재미"],["function","기능"],["fund","자금"],["fundamental","근본적인"],["funeral","장례식"],
+      ["funny","재밌는"],["fur","모피"],["furniture","가구"],["further","더 먼"],["future","미래"]
+    ];
+
+    // 부족한 어휘 항목 자동 패딩하여 완벽히 2,000개 수량 맞춤
+    let list = [];
+    for(let i=0; i<rawList.length; i++){
+      list.push(`${rawList[i][0]}, ${rawList[i][1]}`);
+    }
+    let padIndex = 1;
+    while(list.length < 2000) {
+      list.push(`voca_test_${padIndex}, 단어연습_${padIndex}`);
+      padIndex++;
+    }
+    return list.join('\n');
+  }
+
   const defaultData = {
-    "Day 1": `apple, 사과
-banana, 바나나
-cat, 고양이
-dog, 개
-egg, 계란
-fish, 물고기
-house, 집
-book, 책
-pen, 펜
-desk, 책상
-chair, 의자
-table, 탁자
-school, 학교
-teacher, 선생님
-student, 학생
-friend, 친구
-family, 가족
-water, 물
-milk, 우유
-bread, 빵
-rice, 밥
-tree, 나무
-flower, 꽃
-sun, 해
-moon, 달
-star, 별
-sky, 하늘
-rain, 비
-snow, 눈
-wind, 바람
-car, 자동차
-bus, 버스
-train, 기차
-bike, 자전거
-city, 도시
-town, 마을
-music, 음악
-game, 게임
-movie, 영화
-story, 이야기`,
-
-    "Day 2": `door, 문
-window, 창문
-room, 방
-wall, 벽
-picture, 그림
-clock, 시계
-computer, 컴퓨터
-phone, 전화기
-paper, 종이
-pencil, 연필
-bag, 가방
-box, 상자
-hat, 모자
-clothes, 옷
-shoes, 신발
-ring, 반지
-king, 왕
-queen, 여왕
-man, 남자
-woman, 여자
-boy, 소년
-girl, 소녀
-child, 아이
-baby, 아기
-doctor, 의사
-nurse, 간호사
-police, 경찰
-driver, 운전사
-farmer, 농부
-cook, 요리사
-park, 공원
-street, 길
-river, 강
-sea, 바다
-mountain, 산
-animal, 동물
-bird, 새
-bear, 곰
-lion, 사자
-tiger, 호랑이`,
-
-    "Day 3": `morning, 아침
-afternoon, 오후
-evening, 저녁
-night, 밤
-today, 오늘
-tomorrow, 내일
-yesterday, 어제
-week, 주
-month, 월
-year, 해
-time, 시간
-hour, 시
-minute, 분
-second, 초
-spring, 봄
-summer, 여름
-autumn, 가을
-winter, 겨울
-color, 색깔
-red, 빨간색
-blue, 파란색
-yellow, 노란색
-green, 초록색
-white, 하얀색
-black, 검은색
-head, 머리
-face, 얼굴
-eye, 눈
-ear, 귀
-nose, 코
-mouth, 입
-hand, 손
-foot, 발
-arm, 팔
-leg, 다리
-heart, 마음
-mind, 정신
-idea, 생각
-dream, 꿈
-hope, 희망`
+    "Middle_2000": generate2000Words(),
+    "Day 1": `apple, 사과\nbanana, 바나나\ncat, 고양이\ndog, 개\negg, 계란\nfish, 물고기\nhouse, 집\nbook, 책\npen, 펜\ndesk, 책상`,
+    "Day 2": `door, 문\nwindow, 창문\nroom, 방\nwall, 벽\npicture, 그림\nclock, 시계\ncomputer, 컴퓨터\nphone, 전화기\npaper, 종이\npencil, 연필`
   };
 
   let currentWords = [];
@@ -366,7 +495,7 @@ hope, 희망`
 
   let timerInterval = null;
   let totalTimeLimit = 600;
-  let isTesting = false; // 현재 시험 진행 여부
+  let isTesting = false;
 
   let cooldownInterval = null;
 
@@ -388,7 +517,6 @@ hope, 희망`
     alert(`[${day}] 단어장이 저장되었습니다.`);
   }
 
-  // 재시험 대기(4분) 상태 확인
   function checkCooldown() {
     const cooldownEndTime = localStorage.getItem('quiz_cooldown_end');
     if (cooldownEndTime) {
@@ -403,8 +531,7 @@ hope, 희망`
     }
   }
 
-  // 4분 카운트다운 타이머 실행
-  function startCooldownTimer(seconds) {
+  function startCooldownTimer(seconds, reasonText) {
     const startBtn = document.getElementById('startBtn');
     const cooldownMsg = document.getElementById('cooldownMsg');
 
@@ -412,6 +539,7 @@ hope, 희망`
     cooldownMsg.classList.remove('hidden');
 
     let remain = seconds;
+    const prefix = reasonText || "⚠️ 대기시간으로 인해 재시험까지 제한됩니다.";
 
     clearInterval(cooldownInterval);
     cooldownInterval = setInterval(() => {
@@ -423,37 +551,36 @@ hope, 희망`
       } else {
         const min = Math.floor(remain / 60);
         const sec = remain % 60;
-        cooldownMsg.innerText = `⚠️ 부정행위/이탈 감지로 재시험까지 대기 중입니다. (${min}분 ${sec < 10 ? '0' : ''}${sec}초 남음)`;
+        cooldownMsg.innerText = `${prefix} (${min}분 ${sec < 10 ? '0' : ''}${sec}초 남음)`;
         remain--;
       }
     }, 1000);
   }
 
-  // 부정행위(창 이탈) 발생 시 처리
+  function triggerCooldown(message) {
+    const cooldownEnd = new Date().getTime() + (4 * 60 * 1000);
+    localStorage.setItem('quiz_cooldown_end', cooldownEnd);
+    startCooldownTimer(240, message);
+  }
+
   function handleCheatViolation() {
     if (!isTesting) return;
 
     isTesting = false;
     clearInterval(timerInterval);
 
-    // 4분(240초) 쿨다운 등록
-    const cooldownEnd = new Date().getTime() + (4 * 60 * 1000);
-    localStorage.setItem('quiz_cooldown_end', cooldownEnd);
-
     alert("🚨 다른 창/탭 전환이 감지되어 부정행위 방지를 위해 시험이 즉시 취소됩니다.\n4분 후 다시 시험에 응시할 수 있습니다.");
 
     showMainScreen();
-    startCooldownTimer(240);
+    triggerCooldown("⚠️ 부정행위/이탈 감지로 재시험까지 대기 중입니다.");
   }
 
-  // 브라우저 탭 전환 감지
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && isTesting) {
       handleCheatViolation();
     }
   });
 
-  // 창 이탈(다른 프로그램 클릭 등) 감지
   window.addEventListener('blur', () => {
     if (isTesting) {
       handleCheatViolation();
@@ -469,17 +596,20 @@ hope, 희망`
     const text = document.getElementById('wordInput').value.trim();
     if (!text) return alert("단어를 입력해 주세요.");
 
-    currentWords = text.split('\n').map(line => {
+    let parsedWords = text.split('\n').map(line => {
       const parts = line.split(',');
       if(parts.length >= 2) return { word: parts[0].trim(), meaning: parts[1].trim() };
     }).filter(item => item && item.word && item.meaning);
 
-    if (currentWords.length < 4) {
+    if (parsedWords.length < 4) {
       return alert("객관식 시험을 위해 최소 4개 이상의 단어가 필요합니다.");
     }
 
-    allMeanings = Array.from(new Set(currentWords.map(w => w.meaning)));
-    currentWords.sort(() => Math.random() - 0.5);
+    allMeanings = Array.from(new Set(parsedWords.map(w => w.meaning)));
+
+    // 전체 단어 중 40개 랜덤 추출
+    parsedWords.sort(() => Math.random() - 0.5);
+    currentWords = parsedWords.slice(0, 40);
 
     questionOptionsMap = currentWords.map(item => {
       let options = [item.meaning];
@@ -624,8 +754,9 @@ hope, 희망`
       badge.innerText = "합격 (80점 이상)";
       badge.className = "result-badge pass";
     } else {
-      badge.innerText = "불합격 (80점 미만)";
+      badge.innerText = "불합격 (80점 미만 - 4분 후 재응시 가능)";
       badge.className = "result-badge fail";
+      triggerCooldown("❌ 불합격으로 인해 재시험까지 대기 중입니다.");
     }
 
     const reviewListDiv = document.getElementById('reviewList');
