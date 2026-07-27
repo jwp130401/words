@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>단어 시험 시스템 (커트라인 & 재시험 타이머)</title>
+  <title>단어 시험 시스템 (커트라인 80점 고정)</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -104,7 +104,7 @@
     /* Setup Screen Form */
     .form-group { margin-bottom: 16px; text-align: left; }
     label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
-    select, input[type="number"], textarea {
+    select, textarea {
       width: 100%; padding: 10px; border: 1px solid var(--border);
       border-radius: 8px; font-size: 0.9rem;
     }
@@ -156,6 +156,7 @@
 </head>
 <body>
 
+  <!-- Top Navigation Bar -->
   <div class="header">
     <div class="header-left">
       <span class="badge-title">출제</span>
@@ -168,6 +169,7 @@
 
   <div class="main-wrapper">
 
+    <!-- 1. 메인 설정 화면 -->
     <div id="screen-main" class="quiz-card">
       <h2 style="margin-bottom: 20px; font-size:1.3rem;">단어 시험 설정</h2>
       <div class="form-group">
@@ -177,8 +179,10 @@
         </select>
       </div>
       <div class="form-group">
-        <label>통과 커트라인 점수 (100점 만점 기준)</label>
-        <input type="number" id="cutoffInput" value="80" min="0" max="100">
+        <label>합격 기준</label>
+        <div style="font-size: 0.9rem; font-weight: 700; color: var(--primary); padding: 8px 0;">
+          📌 커트라인: 80점 이상 (40문제 중 32개 이상 정답)
+        </div>
       </div>
       <div class="form-group">
         <label>단어 목록 (자유롭게 추가/수정 가능)</label>
@@ -187,6 +191,7 @@
       <button class="btn-action" onclick="startQuiz()">시험 시작하기 (40문제)</button>
     </div>
 
+    <!-- 2. 시험 응시 화면 -->
     <div id="screen-quiz" class="quiz-card hidden">
       <div id="navPrev" class="nav-arrow prev" onclick="prevQuestion()">❮</div>
       <div id="navNext" class="nav-arrow next" onclick="nextQuestion()">❯</div>
@@ -200,11 +205,13 @@
       <button id="btnSubmit" class="btn-action hidden" style="margin-top: 24px;" onclick="finishQuiz()">최종 제출하기</button>
     </div>
 
+    <!-- 3. 최종 결과 화면 -->
     <div id="screen-result" class="quiz-card hidden" style="text-align: center;">
       <div id="resultBadge" class="result-badge pass">합격</div>
       <h2 id="resultScore" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">100점</h2>
       <p id="resultDesc" style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 16px;"></p>
 
+      <!-- 불합격 시 4분 대기 타이머 -->
       <div id="timerBox" class="timer-box hidden">
         ⏳ 재시험까지 남은 시간: <span id="timerDisplay">04:00</span>
       </div>
@@ -214,6 +221,7 @@
 
   </div>
 
+  <!-- OMR / 문제현황 Modal -->
   <div id="statusModal" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="font-size:1.1rem; color:var(--text);">답안 작성 현황</h3>
@@ -223,6 +231,9 @@
   </div>
 
 <script>
+  // 커트라인 80점 고정
+  const CUTOFF_SCORE = 80;
+
   // 고1 핵심 단어 100개
   const high1Words = [
     ["abandon", "포기하다, 버리다"], ["absorb", "흡수하다"], ["accumulate", "축적하다"], ["accurate", "정확한"],
@@ -371,7 +382,6 @@
     document.getElementById('navPrev').style.display = qIndex > 0 ? 'flex' : 'none';
     document.getElementById('navNext').style.display = qIndex < questions.length - 1 ? 'flex' : 'none';
 
-    // 마지막 문제 다다르면 제출 버튼 보이기
     const btnSubmit = document.getElementById('btnSubmit');
     if (qIndex === questions.length - 1) {
       btnSubmit.classList.remove('hidden');
@@ -384,7 +394,6 @@
     userAnswers[qIndex] = selectedText;
     renderQuestion();
 
-    // 선택 후 바로 채점하지 않고 자동으로 다음 문제 이동
     if (qIndex < questions.length - 1) {
       setTimeout(() => {
         qIndex++;
@@ -408,7 +417,6 @@
   }
 
   function finishQuiz() {
-    // 풀지 않은 문제가 있는지 체크
     const unanswered = userAnswers.filter(a => a === null).length;
     if (unanswered > 0) {
       if (!confirm(`아직 풀지 않은 문제가 ${unanswered}개 있습니다. 이대로 제출하시겠습니까?`)) {
@@ -419,7 +427,6 @@
     document.getElementById('screen-quiz').classList.add('hidden');
     document.getElementById('screen-result').classList.remove('hidden');
 
-    // 채점 진행
     let correctCount = 0;
     questions.forEach((q, idx) => {
       if (userAnswers[idx] === q.correctAnswer) {
@@ -428,7 +435,6 @@
     });
 
     const score = Math.round((correctCount / questions.length) * 100);
-    const cutoff = parseInt(document.getElementById('cutoffInput').value) || 80;
 
     const resultBadge = document.getElementById('resultBadge');
     const resultScore = document.getElementById('resultScore');
@@ -436,26 +442,25 @@
     const timerBox = document.getElementById('timerBox');
     const btnRetry = document.getElementById('btnRetry');
 
-    resultScore.innerText = `${score}점 (${correctCount} / ${questions.length} 문제)`;
+    resultScore.innerText = `${score}점 (${correctCount} / ${questions.length} 문제 정답)`;
 
-    if (score >= cutoff) {
-      // 통과
+    if (score >= CUTOFF_SCORE) {
+      // 통과 (80점 이상)
       resultBadge.className = "result-badge pass";
       resultBadge.innerText = "🎉 통과 (PASS)";
-      resultDesc.innerText = `축하합니다! 커트라인(${cutoff}점)을 통과하셨습니다.`;
+      resultDesc.innerText = `축하합니다! 커트라인(${CUTOFF_SCORE}점)을 넘겨 통과하셨습니다.`;
       timerBox.classList.add('hidden');
       btnRetry.disabled = false;
       btnRetry.innerText = "다시 응시하기";
     } else {
-      // 불합격
+      // 불합격 (80점 미만)
       resultBadge.className = "result-badge fail";
       resultBadge.innerText = "❌ 불합격 (FAIL)";
-      resultDesc.innerText = `커트라인(${cutoff}점)에 미달하였습니다. 4분 후 재시가 가능합니다.`;
+      resultDesc.innerText = `커트라인(${CUTOFF_SCORE}점)을 넘지 못했습니다. 4분 후 재시험에 응시할 수 있습니다.`;
       timerBox.classList.remove('hidden');
       btnRetry.disabled = true;
       
-      // 4분(240초) 카운트다운 시작
-      startTimer(240);
+      startTimer(240); // 4분(240초)
     }
   }
 
