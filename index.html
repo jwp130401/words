@@ -161,7 +161,6 @@
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
   <div class="header">
     <div class="header-left">
       <span class="badge-title">출제</span>
@@ -174,23 +173,21 @@
 
   <div class="main-wrapper">
 
-    <!-- 1. 메인 설정 화면 -->
     <div id="screen-main" class="quiz-card">
       <h2 style="margin-bottom: 20px; font-size:1.3rem;">단어 시험 설정</h2>
       <div class="form-group">
         <label>단어장 선택</label>
         <select id="daySelect" onchange="loadDayData()">
-          <option value="Middle_2000" selected>[랜덤] 중학 필수 2,000단어 (40문제 무작위)</option>
+          <option value="Essential_Voca" selected>수능/중학 필수 단어 세트</option>
         </select>
       </div>
       <div class="form-group">
-        <label>단어 목록 (수정 가능)</label>
-        <textarea id="wordInput" rows="8"></textarea>
+        <label>단어 목록 (자유롭게 추가/수정 가능)</label>
+        <textarea id="wordInput" rows="10" placeholder="영단어, 뜻 형식으로 입력하세요"></textarea>
       </div>
       <button class="btn-action" onclick="startQuiz()">시험 시작하기</button>
     </div>
 
-    <!-- 2. 시험 및 피드백 화면 -->
     <div id="screen-quiz" class="quiz-card hidden">
       <div id="navPrev" class="nav-arrow prev" onclick="prevQuestion()">❮</div>
       <div id="navNext" class="nav-arrow next" onclick="nextQuestion()">❯</div>
@@ -200,18 +197,16 @@
       </div>
 
       <div id="qTypeTitle" class="q-type-title">다음 단어의 뜻은?</div>
-      <div id="questionWord" class="q-word-display">peck</div>
+      <div id="questionWord" class="q-word-display">-</div>
 
       <div id="optionsContainer" class="options-list"></div>
 
-      <!-- 오답 시 하단 유도 팁 -->
       <div id="feedbackBox" class="feedback-box hidden">
         <div class="title">❌ 올바른 정답</div>
         <div id="feedbackText" class="desc"></div>
       </div>
     </div>
 
-    <!-- 3. 결과 화면 -->
     <div id="screen-result" class="quiz-card hidden" style="text-align: center;">
       <h2 style="margin-bottom: 12px;">시험 완료!</h2>
       <p id="resultScore" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: var(--primary);"></p>
@@ -220,7 +215,6 @@
 
   </div>
 
-  <!-- 문제현황 Modal -->
   <div id="statusModal" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="font-size:1.1rem; color:var(--text);">문제 현황</h3>
@@ -230,7 +224,8 @@
   </div>
 
 <script>
-  function generate2000Words() {
+  // 실제 단어 목록
+  function loadRealWords() {
     const rawList = [
       ["abandon","포기하다"],["ability","능력"],["able","~할 수 있는"],["abroad","외국으로"],["absence","부재"],
       ["absent","결석한"],["absolute","절대적인"],["absorb","흡수하다"],["abstract","추상적인"],["academic","학업의"],
@@ -249,16 +244,7 @@
       ["convention","협의회"],["conscious","의식하는"],["edit","편집하다"],["contain","포함하다"],["prepare for","~을 대비하다"]
     ];
 
-    let list = [];
-    for(let i=0; i<rawList.length; i++){
-      list.push(`${rawList[i][0]}, ${rawList[i][1]}`);
-    }
-    let padIndex = 1;
-    while(list.length < 2000) {
-      list.push(`voca_test_${padIndex}, 단어연습_${padIndex}`);
-      padIndex++;
-    }
-    return list.join('\n');
+    return rawList.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
   }
 
   let currentWords = [];
@@ -271,7 +257,7 @@
   };
 
   function loadDayData() {
-    document.getElementById('wordInput').value = generate2000Words();
+    document.getElementById('wordInput').value = loadRealWords();
   }
 
   function startQuiz() {
@@ -283,14 +269,15 @@
 
     if (parsedWords.length < 5) return alert("최소 5개 이상의 단어가 필요합니다.");
 
+    // 입력된 단어들을 섞고 최대 입력 개수만큼 출제
     parsedWords.sort(() => Math.random() - 0.5);
-    currentWords = parsedWords.slice(0, 40);
+    currentWords = parsedWords;
 
     const allMeanings = parsedWords.map(w => w.meaning);
     const allWords = parsedWords.map(w => w.word);
 
-    questions = currentWords.map((item, idx) => {
-      const isWordToMeaning = Math.random() > 0.3; // 70%확률로 영단어->뜻, 30%확률로 뜻->영단어
+    questions = currentWords.map((item) => {
+      const isWordToMeaning = Math.random() > 0.3; // 70% 확률로 영단어->뜻
       
       let options = [];
       let correctAnswer = isWordToMeaning ? item.meaning : item.word;
@@ -300,7 +287,7 @@
       let pool = isWordToMeaning ? allMeanings.filter(m => m !== item.meaning) : allWords.filter(w => w !== item.word);
       pool.sort(() => Math.random() - 0.5);
 
-      while(options.length < 5 && pool.length > 0) {
+      while(options.length < Math.min(5, parsedWords.length) && pool.length > 0) {
         options.push(pool.pop());
       }
       options.sort(() => Math.random() - 0.5);
@@ -383,7 +370,7 @@
   }
 
   function selectOption(selectedText) {
-    if (userResults[qIndex] !== null) return; // 이미 푼 문제는 선택 불가
+    if (userResults[qIndex] !== null) return;
 
     const q = questions[qIndex];
     const isCorrect = selectedText === q.correctAnswer;
@@ -395,7 +382,6 @@
 
     renderQuestion();
 
-    // 마지막 문제일 경우 자동으로 결과 페이지로 넘어가기 전 딜레이
     if (userResults.every(res => res !== null)) {
       setTimeout(finishQuiz, 1200);
     }
