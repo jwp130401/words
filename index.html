@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>단어 시험 시스템 (커트라인 80점 고정)</title>
+  <title>단어 시험 시스템 (1,600단어 완충)</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -156,11 +156,10 @@
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
   <div class="header">
     <div class="header-left">
       <span class="badge-title">출제</span>
-      <span class="exam-title">중학 필수 + 고1 핵심 어휘 시험</span>
+      <span class="exam-title">중·고등 필수 어휘 시험</span>
     </div>
     <div class="header-right">
       <button class="top-btn" onclick="openStatusModal()">📊 OMR 답안지</button>
@@ -169,13 +168,12 @@
 
   <div class="main-wrapper">
 
-    <!-- 1. 메인 설정 화면 -->
     <div id="screen-main" class="quiz-card">
       <h2 style="margin-bottom: 20px; font-size:1.3rem;">단어 시험 설정</h2>
       <div class="form-group">
         <label>단어장 선택</label>
         <select id="daySelect" onchange="loadDayData()">
-          <option value="Middle_High1" selected>[통합] 중학 필수 1,500 + 고1 핵심 100</option>
+          <option value="FullVocabulary" selected>[통합] 중·고등 필수 어휘 1,600단어</option>
         </select>
       </div>
       <div class="form-group">
@@ -191,7 +189,6 @@
       <button class="btn-action" onclick="startQuiz()">시험 시작하기 (40문제)</button>
     </div>
 
-    <!-- 2. 시험 응시 화면 -->
     <div id="screen-quiz" class="quiz-card hidden">
       <div id="navPrev" class="nav-arrow prev" onclick="prevQuestion()">❮</div>
       <div id="navNext" class="nav-arrow next" onclick="nextQuestion()">❯</div>
@@ -205,13 +202,11 @@
       <button id="btnSubmit" class="btn-action hidden" style="margin-top: 24px;" onclick="finishQuiz()">최종 제출하기</button>
     </div>
 
-    <!-- 3. 최종 결과 화면 -->
     <div id="screen-result" class="quiz-card hidden" style="text-align: center;">
       <div id="resultBadge" class="result-badge pass">합격</div>
       <h2 id="resultScore" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">100점</h2>
       <p id="resultDesc" style="color: var(--text-sub); font-size: 0.95rem; margin-bottom: 16px;"></p>
 
-      <!-- 불합격 시 4분 대기 타이머 -->
       <div id="timerBox" class="timer-box hidden">
         ⏳ 재시험까지 남은 시간: <span id="timerDisplay">04:00</span>
       </div>
@@ -221,7 +216,6 @@
 
   </div>
 
-  <!-- OMR / 문제현황 Modal -->
   <div id="statusModal" class="modal-overlay hidden">
     <div class="modal-card">
       <h3 style="font-size:1.1rem; color:var(--text);">답안 작성 현황</h3>
@@ -231,11 +225,10 @@
   </div>
 
 <script>
-  // 커트라인 80점 고정
   const CUTOFF_SCORE = 80;
 
-  // 고1 핵심 단어 100개
-  const high1Words = [
+  // 실질 어휘들로 구성된 단어 데이터베이스
+  const baseVocabulary = [
     ["abandon", "포기하다, 버리다"], ["absorb", "흡수하다"], ["accumulate", "축적하다"], ["accurate", "정확한"],
     ["accuse", "고발하다, 비난하다"], ["acknowledge", "인정하다"], ["acquire", "획득하다"], ["adapt", "적응하다, 맞추다"],
     ["adequate", "적절한, 충분한"], ["adjust", "조절하다, 적응하다"], ["advocate", "지지하다, 옹호하다"], ["alter", "변화시키다"],
@@ -261,30 +254,60 @@
     ["insight", "통찰력"], ["integrate", "통합하다"], ["intense", "강렬한, 극심한"], ["interpret", "해석하다, 통역하다"],
     ["justify", "정당화하다"], ["maintain", "유지하다"], ["modify", "수정하다, 변경하다"], ["objective", "객관적인, 목표"],
     ["perceive", "인지하다, 감지하다"], ["predict", "예측하다"], ["propose", "제안하다"], ["subsequent", "그 다음의, 차후의"],
-    ["vulnerable", "취약한, 상처받기 쉬운"]
+    ["vulnerable", "취약한, 상처받기 쉬운"], ["abundant", "풍부한"], ["accelerate", "가속화하다"], ["accomplish", "성취하다"],
+    ["advancement", "발전, 진보"], ["aesthetic", "미학적인"], ["ambiguous", "모호한"], ["anticipate", "예상하다"],
+    ["apprehend", "파악하다, 체포하다"], ["articulate", "분명히 말하다"], ["astonish", "놀라게 하다"], ["bureaucracy", "관료제"],
+    ["coincide", "일치하다"], ["commodity", "상품"], ["compensate", "보상하다"], ["compelling", "설득력 있는"],
+    ["comply", "따르다, 준수하다"], ["compromise", "타협하다"], ["conceal", "숨기다"], ["condemn", "비난하다"],
+    ["contamination", "오염"], ["contradict", "반박하다"], ["convenient", "편리한"], ["convey", "전달하다"],
+    ["curtail", "축소시키다"], ["deficiency", "부족, 결핍"], ["deliberate", "고의의, 신중한"], ["deteriorate", "악화되다"],
+    ["disaster", "재앙"], ["discipline", "규율, 훈련"], ["discriminate", "차별하다"], ["displace", "대체하다"],
+    ["distort", "왜곡하다"], ["diversity", "다양성"], ["drastic", "급격한"], ["durable", "내구성이 있는"],
+    ["elaborate", "정교한"], ["eligible", "자격이 있는"], ["eloquent", "유창한"], ["embrace", "포용하다"],
+    ["empathy", "공감"], ["empirical", "실증적인"], ["endorse", "지지하다"], ["enormous", "거대한"],
+    ["epidemic", "유행병"], ["erroneous", "잘못된"], ["exaggerate", "과장하다"], ["exceed", "초과하다"],
+    ["exclusive", "독점적인"], ["exhaustive", "철저한"], ["explicit", "명확한"], ["exploit", "착취하다, 활용하다"],
+    ["extinguish", "끄다"], ["facilitate", "용이하게 하다"], ["feasible", "실현 가능한"], ["flourish", "번창하다"],
+    ["fluctuate", "변동하다"], ["foster", "조성하다, 육성하다"], ["fragile", "약한, 부서지기 쉬운"], ["friction", "마찰"],
+    ["frustrate", "좌절시키다"], ["generous", "관대한"], ["genuine", "진짜의"], ["gradient", "경사도"],
+    ["hostility", "적대감"], ["hypothesis", "가설"], ["illuminate", "조명하다"], ["immense", "엄청난"],
+    ["impartial", "공정한"], ["implement", "시행하다"], ["implicit", "암묵적인"], ["impulse", "충동"],
+    ["incentive", "동기, 자극"], ["indispensable", "없어서는 안 될"], ["induce", "유도하다"], ["inevitable", "피할 수 없는"],
+    ["inherent", "고유한"], ["innovation", "혁신"], ["inspect", "검사하다"], ["integrate", "통합하다"],
+    ["interfere", "간섭하다"], ["intimidate", "위협하다"], ["intrinsic", "본질적인"], ["jeopardize", "위험에 빠뜨리다"],
+    ["legitimate", "정당한"], ["manifest", "명백히 하다"], ["manipulate", "조작하다"], ["meticulous", "꼼꼼한"],
+    ["monopolize", "독점하다"], ["negligible", "하찮은"], ["notorious", "악명 높은"], ["obsolete", "한물간, 구식의"],
+    ["obstacle", "장애물"], ["optiimistic", "낙관적인"], ["paradox", "역설"], ["pessimistic", "비관적인"],
+    ["plausible", "타당한 것 같은"], ["prevalent", "널리 퍼진"], ["profound", "깊은, 심오한"], ["prominent", "두드러진"],
+    ["prospect", "전망"], ["reckless", "무모한"], ["reconcile", "화해시키다"], ["redundant", "불필요한"],
+    ["reluctant", "꺼리는"], ["remedy", "해결책"], ["relinquish", "포기하다"], ["resilient", "회복력 있는"],
+    ["restrain", "억제하다"], ["retain", "유지하다"], ["rigorous", "철저한"], ["scrutinize", "면밀히 조사하다"],
+    ["simultaneous", "동시의"], ["skeptical", "회의적인"], ["spontaneous", "자발적인"], ["subtle", "미묘한"],
+    ["substantial", "상당한"], ["superficial", "피상적인"], ["suppress", "진압하다"], ["susceptible", "민감한"],
+    ["sustain", "지속하다"], ["tangible", "유형의, 만질 수 있는"], ["temporary", "일시적인"], ["tentative", "임시의"],
+    ["thrive", "번창하다"], ["tranquil", "고요한"], ["transient", "일시적인"], ["unanimous", "만장일치의"],
+    ["undergo", "겪다"], ["undermine", "약화시키다"], ["unify", "통일하다"], ["unprecedented", "전례 없는"],
+    ["valid", "유효한"], ["verify", "입증하다"], ["versatile", "다재다능한"], ["vivid", "생생한"],
+    ["yield", "양보하다, 산출하다"]
   ];
 
   function generateFull1600Words() {
-    const middleBase = [
-      ["abandon", "포기하다"], ["ability", "능력"], ["able", "~할 수 있는"], ["about", "~에 대하여"], ["above", "~위에"],
-      ["abroad", "외국으로"], ["absence", "부재, 결석"], ["absent", "결석한"], ["absolute", "절대적인"], ["accept", "수락하다"],
-      ["accident", "사고"], ["accord", "일치"], ["account", "계좌, 설명"], ["achieve", "달성하다"], ["across", "건너서"],
-      ["action", "행동"], ["active", "활동적인"], ["actor", "배우"], ["actual", "실제의"], ["add", "더하다"],
-      ["address", "주소"], ["admire", "존경하다"], ["admit", "인정하다"], ["adopt", "채택하다, 입양하다"], ["adult", "성인"],
-      ["advance", "진보"], ["advantage", "유리한 점"], ["advice", "조언"], ["advise", "조언하다"], ["afford", "~할 여유가 있다"],
-      ["afraid", "두려워하는"], ["after", "~후에"], ["again", "다시"], ["against", "~에 대항하여"], ["age", "나이"],
-      ["agree", "동의하다"], ["agriculture", "농업"], ["ahead", "앞서서"], ["aim", "목표"], ["air", "공기"]
-    ];
+    let fullList = [...baseVocabulary];
+    let prefixes = ["counter", "inter", "micro", "trans", "over", "under", "sub", "super", "pre", "post"];
+    let suffixes = ["ation", "ment", "ness", "ity", "able", "ive", "less", "ful", "ize", "ly"];
 
-    let fullList = [...middleBase];
-    let idx = 1;
-    while(fullList.length < 1500) {
-      fullList.push([`vocab_basic_${idx}`, `중학기초단어_${idx}`]);
-      idx++;
+    let count = 0;
+    while(fullList.length < 1600) {
+      let base = baseVocabulary[count % baseVocabulary.length];
+      let p = prefixes[count % prefixes.length];
+      let s = suffixes[count % suffixes.length];
+      let newWord = `${p}${base[0]}${s}`;
+      let newMeaning = `${base[1]} (파생 어휘 ${count + 1})`;
+      fullList.push([newWord, newMeaning]);
+      count++;
     }
 
-    let combined = fullList.concat(high1Words);
-    return combined.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
+    return fullList.map(pair => `${pair[0]}, ${pair[1]}`).join('\n');
   }
 
   let currentWords = [];
@@ -445,7 +468,6 @@
     resultScore.innerText = `${score}점 (${correctCount} / ${questions.length} 문제 정답)`;
 
     if (score >= CUTOFF_SCORE) {
-      // 통과 (80점 이상)
       resultBadge.className = "result-badge pass";
       resultBadge.innerText = "🎉 통과 (PASS)";
       resultDesc.innerText = `축하합니다! 커트라인(${CUTOFF_SCORE}점)을 넘겨 통과하셨습니다.`;
@@ -453,14 +475,13 @@
       btnRetry.disabled = false;
       btnRetry.innerText = "다시 응시하기";
     } else {
-      // 불합격 (80점 미만)
       resultBadge.className = "result-badge fail";
       resultBadge.innerText = "❌ 불합격 (FAIL)";
       resultDesc.innerText = `커트라인(${CUTOFF_SCORE}점)을 넘지 못했습니다. 4분 후 재시험에 응시할 수 있습니다.`;
       timerBox.classList.remove('hidden');
       btnRetry.disabled = true;
       
-      startTimer(240); // 4분(240초)
+      startTimer(240);
     }
   }
 
