@@ -44,7 +44,6 @@
     }
 
     h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; color: var(--text); font-weight: 700; }
-    h2 { font-size: 1.2rem; margin-bottom: 12px; }
     .hidden { display: none !important; }
 
     .btn {
@@ -60,7 +59,9 @@
     }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
     .btn-secondary { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e2e8f0; }
 
     .timer-container {
       width: 100%;
@@ -113,6 +114,17 @@
       color: var(--text);
     }
     .option-btn:hover { border-color: var(--primary); background: #f0f7ff; }
+    .option-btn.selected {
+      border: 2px solid var(--primary);
+      background: #eff6ff;
+      font-weight: 700;
+    }
+
+    .nav-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
 
     .result-badge {
       font-size: 1.2rem;
@@ -136,12 +148,22 @@
     }
     .review-item { padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
     .review-item:last-child { border-bottom: none; }
+
+    /* 대기시간 안내 메시지 스타일 */
+    .cooldown-info {
+      color: #dc2626;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
 
+  <!-- 1. 메인 설정 화면 -->
   <div id="screen-main">
     <h1>단어 시험 시스템</h1>
     
@@ -170,9 +192,11 @@
       </select>
     </div>
 
-    <button class="btn btn-primary" onclick="startQuiz()">시험 시작 (커트라인 80점)</button>
+    <button id="startBtn" class="btn btn-primary" onclick="startQuiz()">시험 시작 (커트라인 80점)</button>
+    <div id="cooldownMsg" class="cooldown-info hidden"></div>
   </div>
 
+  <!-- 2. 시험 진행 화면 -->
   <div id="screen-quiz" class="hidden">
     <div class="timer-container" id="timerContainer">
       <div id="timerBar" class="timer-bar"></div>
@@ -186,8 +210,13 @@
     </div>
 
     <div id="optionsContainer" class="options-grid"></div>
+
+    <div class="nav-controls">
+      <button id="prevBtn" class="btn btn-secondary hidden" onclick="prevQuestion()">⬅️ 이전 문제로</button>
+    </div>
   </div>
 
+  <!-- 3. 결과 화면 -->
   <div id="screen-result" class="hidden">
     <h1>시험 결과</h1>
     <div id="scoreText" style="text-align:center; font-size:1.05rem; font-weight:600;"></div>
@@ -333,13 +362,17 @@ hope, 희망`
   let allMeanings = [];
   let qIndex = 0;
   let userAnswers = [];
+  let questionOptionsMap = [];
 
   let timerInterval = null;
   let totalTimeLimit = 600;
-  let timeRemaining = 0;
+  let isTesting = false; // 현재 시험 진행 여부
+
+  let cooldownInterval = null;
 
   window.onload = function() {
     loadDayData();
+    checkCooldown();
   };
 
   function loadDayData() {
@@ -355,7 +388,84 @@ hope, 희망`
     alert(`[${day}] 단어장이 저장되었습니다.`);
   }
 
+  // 재시험 대기(4분) 상태 확인
+  function checkCooldown() {
+    const cooldownEndTime = localStorage.getItem('quiz_cooldown_end');
+    if (cooldownEndTime) {
+      const now = new Date().getTime();
+      const remainingMs = parseInt(cooldownEndTime) - now;
+
+      if (remainingMs > 0) {
+        startCooldownTimer(Math.ceil(remainingMs / 1000));
+      } else {
+        localStorage.removeItem('quiz_cooldown_end');
+      }
+    }
+  }
+
+  // 4분 카운트다운 타이머 실행
+  function startCooldownTimer(seconds) {
+    const startBtn = document.getElementById('startBtn');
+    const cooldownMsg = document.getElementById('cooldownMsg');
+
+    startBtn.disabled = true;
+    cooldownMsg.classList.remove('hidden');
+
+    let remain = seconds;
+
+    clearInterval(cooldownInterval);
+    cooldownInterval = setInterval(() => {
+      if (remain <= 0) {
+        clearInterval(cooldownInterval);
+        localStorage.removeItem('quiz_cooldown_end');
+        startBtn.disabled = false;
+        cooldownMsg.classList.add('hidden');
+      } else {
+        const min = Math.floor(remain / 60);
+        const sec = remain % 60;
+        cooldownMsg.innerText = `⚠️ 부정행위/이탈 감지로 재시험까지 대기 중입니다. (${min}분 ${sec < 10 ? '0' : ''}${sec}초 남음)`;
+        remain--;
+      }
+    }, 1000);
+  }
+
+  // 부정행위(창 이탈) 발생 시 처리
+  function handleCheatViolation() {
+    if (!isTesting) return;
+
+    isTesting = false;
+    clearInterval(timerInterval);
+
+    // 4분(240초) 쿨다운 등록
+    const cooldownEnd = new Date().getTime() + (4 * 60 * 1000);
+    localStorage.setItem('quiz_cooldown_end', cooldownEnd);
+
+    alert("🚨 다른 창/탭 전환이 감지되어 부정행위 방지를 위해 시험이 즉시 취소됩니다.\n4분 후 다시 시험에 응시할 수 있습니다.");
+
+    showMainScreen();
+    startCooldownTimer(240);
+  }
+
+  // 브라우저 탭 전환 감지
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && isTesting) {
+      handleCheatViolation();
+    }
+  });
+
+  // 창 이탈(다른 프로그램 클릭 등) 감지
+  window.addEventListener('blur', () => {
+    if (isTesting) {
+      handleCheatViolation();
+    }
+  });
+
   function startQuiz() {
+    const cooldownEndTime = localStorage.getItem('quiz_cooldown_end');
+    if (cooldownEndTime && parseInt(cooldownEndTime) > new Date().getTime()) {
+      return alert("대기시간이 아직 남아있어 시험을 시작할 수 없습니다.");
+    }
+
     const text = document.getElementById('wordInput').value.trim();
     if (!text) return alert("단어를 입력해 주세요.");
 
@@ -371,8 +481,21 @@ hope, 희망`
     allMeanings = Array.from(new Set(currentWords.map(w => w.meaning)));
     currentWords.sort(() => Math.random() - 0.5);
 
+    questionOptionsMap = currentWords.map(item => {
+      let options = [item.meaning];
+      let otherMeanings = allMeanings.filter(m => m !== item.meaning);
+      otherMeanings.sort(() => Math.random() - 0.5);
+
+      while (options.length < 4 && otherMeanings.length > 0) {
+        options.push(otherMeanings.pop());
+      }
+      options.sort(() => Math.random() - 0.5);
+      return options;
+    });
+
     qIndex = 0;
     userAnswers = [];
+    isTesting = true;
 
     document.getElementById('screen-main').classList.add('hidden');
     document.getElementById('screen-result').classList.add('hidden');
@@ -392,7 +515,6 @@ hope, 희망`
   }
 
   function startTotalTimer() {
-    timeRemaining = totalTimeLimit;
     const timerBar = document.getElementById('timerBar');
     timerBar.style.width = '100%';
 
@@ -408,7 +530,8 @@ hope, 희망`
 
       if (currentStep >= totalSteps) {
         clearInterval(timerInterval);
-        alert("10분 제한 시간이 종료되었습니다. 시험 결과로 이동합니다.");
+        isTesting = false;
+        alert("시험 시간이 종료되었습니다. 결과로 이동합니다.");
         finishQuiz();
       }
     }, step);
@@ -417,6 +540,7 @@ hope, 희망`
   function renderQuestion() {
     if (qIndex >= currentWords.length) {
       clearInterval(timerInterval);
+      isTesting = false;
       finishQuiz();
       return;
     }
@@ -425,20 +549,24 @@ hope, 희망`
     document.getElementById('qIndex').innerText = qIndex + 1;
     document.getElementById('questionWord').innerText = currentItem.word;
 
-    let options = [currentItem.meaning];
-    let otherMeanings = allMeanings.filter(m => m !== currentItem.meaning);
-    otherMeanings.sort(() => Math.random() - 0.5);
-
-    while (options.length < 4 && otherMeanings.length > 0) {
-      options.push(otherMeanings.pop());
+    const prevBtn = document.getElementById('prevBtn');
+    if (qIndex > 0) {
+      prevBtn.classList.remove('hidden');
+    } else {
+      prevBtn.classList.add('hidden');
     }
-    options.sort(() => Math.random() - 0.5);
+
+    const options = questionOptionsMap[qIndex];
+    const prevSelected = userAnswers[qIndex] ? userAnswers[qIndex].selectedMeaning : null;
 
     const container = document.getElementById('optionsContainer');
     container.innerHTML = '';
     options.forEach((optText, i) => {
       const btn = document.createElement('button');
       btn.className = 'option-btn';
+      if (prevSelected === optText) {
+        btn.classList.add('selected');
+      }
       btn.innerText = `${i+1}. ${optText}`;
       btn.onclick = () => selectOption(optText);
       container.appendChild(btn);
@@ -446,23 +574,33 @@ hope, 희망`
   }
 
   function selectOption(selectedText) {
-    userAnswers.push({
+    userAnswers[qIndex] = {
       word: currentWords[qIndex].word,
       correctMeaning: currentWords[qIndex].meaning,
       selectedMeaning: selectedText
-    });
+    };
 
     qIndex++;
     renderQuestion();
   }
 
+  function prevQuestion() {
+    if (qIndex > 0) {
+      qIndex--;
+      renderQuestion();
+    }
+  }
+
   function finishQuiz() {
-    while (userAnswers.length < currentWords.length) {
-      userAnswers.push({
-        word: currentWords[userAnswers.length].word,
-        correctMeaning: currentWords[userAnswers.length].meaning,
-        selectedMeaning: "미응시 (시간초과)"
-      });
+    isTesting = false;
+    for (let i = 0; i < currentWords.length; i++) {
+      if (!userAnswers[i]) {
+        userAnswers[i] = {
+          word: currentWords[i].word,
+          correctMeaning: currentWords[i].meaning,
+          selectedMeaning: "미응시 (시간초과/건너뜀)"
+        };
+      }
     }
 
     document.getElementById('screen-quiz').classList.add('hidden');
@@ -504,6 +642,7 @@ hope, 희망`
   }
 
   function showMainScreen() {
+    document.getElementById('screen-quiz').classList.add('hidden');
     document.getElementById('screen-result').classList.add('hidden');
     document.getElementById('screen-main').classList.remove('hidden');
   }
